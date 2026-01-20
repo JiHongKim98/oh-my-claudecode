@@ -5,7 +5,7 @@
 # oh-my-claudecode
 
 [![Version](https://img.shields.io/badge/version-3.0.0-6366f1)](https://github.com/Yeachan-Heo/oh-my-claudecode)
-[![npm version](https://img.shields.io/npm/v/oh-my-claudecode?color=cb3837)](https://www.npmjs.com/package/oh-my-claudecode)
+[![npm version](https://img.shields.io/npm/v/oh-my-claude-sisyphus?color=cb3837)](https://www.npmjs.com/package/oh-my-claude-sisyphus)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 **Multi-agent orchestration for Claude Code. Zero learning curve.**
