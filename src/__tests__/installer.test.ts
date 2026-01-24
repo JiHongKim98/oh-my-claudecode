@@ -303,11 +303,9 @@ describe('Installer Constants', () => {
         expect(CLAUDE_MD_CONTENT).toContain(keyword);
       }
 
-      // Verify backward compatibility section exists
-      expect(CLAUDE_MD_CONTENT).toContain('All old commands still work');
-      expect(CLAUDE_MD_CONTENT).toContain('/oh-my-claudecode:ralph');
-      expect(CLAUDE_MD_CONTENT).toContain('/oh-my-claudecode:ultrawork');
-      expect(CLAUDE_MD_CONTENT).toContain('/oh-my-claudecode:planner');
+      // Verify migration section exists (points to MIGRATION.md)
+      expect(CLAUDE_MD_CONTENT).toContain('Migration');
+      expect(CLAUDE_MD_CONTENT).toContain('MIGRATION.md');
     });
 
     it('should contain markdown tables', () => {

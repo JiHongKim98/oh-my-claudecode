@@ -1,6 +1,6 @@
 ---
 name: cancel
-description: Cancel any active OMC mode (autopilot, ralph, ultrawork, ecomode, ultraqa)
+description: Cancel any active OMC mode (autopilot, ralph, ultrawork, ecomode, ultraqa, swarm, ultrapilot, pipeline)
 ---
 
 # Cancel Skill
@@ -15,6 +15,9 @@ Automatically detects which mode is active and cancels it:
 - **Ultrawork**: Stops parallel execution (standalone or linked)
 - **Ecomode**: Stops token-efficient parallel execution (standalone or linked to ralph)
 - **UltraQA**: Stops QA cycling workflow
+- **Swarm**: Stops coordinated agent swarm, releases claimed tasks
+- **Ultrapilot**: Stops parallel autopilot workers
+- **Pipeline**: Stops sequential agent pipeline
 
 ## Usage
 
@@ -32,6 +35,9 @@ The skill checks state files to determine what's active:
 - `.omc/ultrawork-state.json` → Ultrawork detected
 - `.omc/ecomode-state.json` → Ecomode detected
 - `.omc/ultraqa-state.json` → UltraQA detected
+- `.omc/swarm-state.json` → Swarm detected
+- `.omc/ultrapilot-state.json` → Ultrapilot detected
+- `.omc/pipeline-state.json` → Pipeline detected
 
 If multiple modes are active, they're cancelled in order of dependency:
 1. Autopilot (includes ralph/ultraqa/ecomode cleanup)
@@ -39,6 +45,9 @@ If multiple modes are active, they're cancelled in order of dependency:
 3. Ultrawork (standalone)
 4. Ecomode (standalone)
 5. UltraQA (standalone)
+6. Swarm (standalone)
+7. Ultrapilot (standalone)
+8. Pipeline (standalone)
 
 ## Force Clear All
 
@@ -60,6 +69,10 @@ This removes all state files:
 - `.omc/ultrawork-state.json`
 - `.omc/ecomode-state.json`
 - `.omc/ultraqa-state.json`
+- `.omc/swarm-state.json`
+- `.omc/state/swarm-tasks.json`
+- `.omc/ultrapilot-state.json`
+- `.omc/pipeline-state.json`
 - `~/.claude/ralph-state.json`
 - `~/.claude/ultrawork-state.json`
 - `~/.claude/ecomode-state.json`
@@ -123,6 +136,10 @@ if [[ "$FORCE_MODE" == "true" ]]; then
   rm -f .omc/ultraqa-state.json
   rm -f .omc/ralph-plan-state.json
   rm -f .omc/ralph-verification.json
+  rm -f .omc/swarm-state.json
+  rm -f .omc/state/swarm-tasks.json
+  rm -f .omc/ultrapilot-state.json
+  rm -f .omc/pipeline-state.json
 
   # Remove global state files
   rm -f ~/.claude/ralph-state.json
@@ -287,6 +304,10 @@ if [[ "$FORCE_MODE" == "true" ]]; then
   rm -f .omc/ultraqa-state.json
   rm -f .omc/ralph-plan-state.json
   rm -f .omc/ralph-verification.json
+  rm -f .omc/swarm-state.json
+  rm -f .omc/state/swarm-tasks.json
+  rm -f .omc/ultrapilot-state.json
+  rm -f .omc/pipeline-state.json
 
   # Remove global state files
   rm -f ~/.claude/ralph-state.json
@@ -465,6 +486,46 @@ if [[ -f .omc/ultraqa-state.json ]]; then
   fi
 fi
 
+# 6. Check Swarm (standalone)
+if [[ -f .omc/swarm-state.json ]]; then
+  SWARM_STATE=$(cat .omc/swarm-state.json)
+  SWARM_ACTIVE=$(echo "$SWARM_STATE" | jq -r '.active // false')
+
+  if [[ "$SWARM_ACTIVE" == "true" ]]; then
+    rm -f .omc/swarm-state.json
+    rm -f .omc/state/swarm-tasks.json
+    echo "Swarm cancelled. Coordinated agents stopped."
+    CANCELLED_ANYTHING=true
+    exit 0
+  fi
+fi
+
+# 7. Check Ultrapilot (standalone)
+if [[ -f .omc/ultrapilot-state.json ]]; then
+  ULTRAPILOT_STATE=$(cat .omc/ultrapilot-state.json)
+  ULTRAPILOT_ACTIVE=$(echo "$ULTRAPILOT_STATE" | jq -r '.active // false')
+
+  if [[ "$ULTRAPILOT_ACTIVE" == "true" ]]; then
+    rm -f .omc/ultrapilot-state.json
+    echo "Ultrapilot cancelled. Parallel autopilot workers stopped."
+    CANCELLED_ANYTHING=true
+    exit 0
+  fi
+fi
+
+# 8. Check Pipeline (standalone)
+if [[ -f .omc/pipeline-state.json ]]; then
+  PIPELINE_STATE=$(cat .omc/pipeline-state.json)
+  PIPELINE_ACTIVE=$(echo "$PIPELINE_STATE" | jq -r '.active // false')
+
+  if [[ "$PIPELINE_ACTIVE" == "true" ]]; then
+    rm -f .omc/pipeline-state.json
+    echo "Pipeline cancelled. Sequential agent chain stopped."
+    CANCELLED_ANYTHING=true
+    exit 0
+  fi
+fi
+
 # No active modes found
 if [[ "$CANCELLED_ANYTHING" == "false" ]]; then
   echo "No active OMC modes detected."
@@ -475,6 +536,9 @@ if [[ "$CANCELLED_ANYTHING" == "false" ]]; then
   echo "  - Ultrawork (.omc/ultrawork-state.json)"
   echo "  - Ecomode (.omc/ecomode-state.json)"
   echo "  - UltraQA (.omc/ultraqa-state.json)"
+  echo "  - Swarm (.omc/swarm-state.json)"
+  echo "  - Ultrapilot (.omc/ultrapilot-state.json)"
+  echo "  - Pipeline (.omc/pipeline-state.json)"
   echo ""
   echo "Use --force to clear all state files anyway."
 fi
@@ -489,6 +553,9 @@ fi
 | Ultrawork | "Ultrawork cancelled. Parallel execution mode deactivated." |
 | Ecomode | "Ecomode cancelled. Token-efficient execution mode deactivated." |
 | UltraQA | "UltraQA cancelled. QA cycling workflow stopped." |
+| Swarm | "Swarm cancelled. Coordinated agents stopped." |
+| Ultrapilot | "Ultrapilot cancelled. Parallel autopilot workers stopped." |
+| Pipeline | "Pipeline cancelled. Sequential agent chain stopped." |
 | Force | "All OMC modes cleared. You are free to start fresh." |
 | None | "No active OMC modes detected." |
 
@@ -500,6 +567,9 @@ fi
 | Ralph | No | N/A |
 | Ultrawork | No | N/A |
 | UltraQA | No | N/A |
+| Swarm | No | N/A |
+| Ultrapilot | No | N/A |
+| Pipeline | No | N/A |
 
 ## Notes
 
