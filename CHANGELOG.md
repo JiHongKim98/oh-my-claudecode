@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.8.15] - 2026-01-31
+
+### Fixed
+
+- **Stop Hook Not Blocking** (PR #237, fixes #233) - Fixed persistent-mode Stop hook using `{ continue: true }` instead of `{ decision: "block" }`. The old approach was a no-op that always allowed stops instead of blocking them. All 8 mode handlers (ralph, autopilot, ultrapilot, swarm, pipeline, ultraqa, ultrawork, ecomode) now properly block premature stops.
+
+---
+
 ## [3.8.14] - 2026-01-30
 
 ### Added
