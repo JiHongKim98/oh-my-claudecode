@@ -7,9 +7,9 @@
  * - maintenance: Prune old state files, cleanup orphaned state, vacuum SQLite
  */
 
-import { existsSync, mkdirSync, readdirSync, statSync, unlinkSync, readFileSync } from 'fs';
+import { existsSync, mkdirSync, readdirSync, statSync, unlinkSync, readFileSync, appendFileSync } from 'fs';
 import { join, dirname } from 'path';
-import { execSync } from 'child_process';
+import { execSync, execFileSync } from 'child_process';
 import { registerBeadsContext } from '../beads-context/index.js';
 
 // ============================================================================
@@ -115,7 +115,6 @@ export function setEnvironmentVariables(): string[] {
   if (process.env.CLAUDE_ENV_FILE) {
     try {
       const envContent = `export OMC_INITIALIZED=true\n`;
-      const { appendFileSync } = require('fs');
       appendFileSync(process.env.CLAUDE_ENV_FILE, envContent);
       envVars.push('OMC_INITIALIZED');
     } catch {
@@ -290,8 +289,8 @@ export function vacuumSwarmDb(directory: string): boolean {
     // Check if sqlite3 is available
     execSync('which sqlite3', { stdio: 'pipe' });
 
-    // Run VACUUM
-    execSync(`sqlite3 "${swarmDbPath}" "VACUUM;"`, {
+    // Run VACUUM using execFileSync to prevent command injection
+    execFileSync('sqlite3', [swarmDbPath, 'VACUUM;'], {
       stdio: 'pipe',
       timeout: 5000, // 5 second timeout
     });

@@ -218,15 +218,13 @@ cmd_review() {
     fi
 
     # Create session metadata
-    local metadata=$(cat << EOF
-{
-  "pr_number": $pr_number,
-  "pr_title": $(echo "$pr_title" | jq -R .),
-  "pr_author": "$pr_author",
-  "pr_url": "$pr_url"
-}
-EOF
-)
+    local metadata
+    metadata=$(jq -n \
+      --argjson pr_number "$pr_number" \
+      --arg pr_title "$pr_title" \
+      --arg pr_author "$pr_author" \
+      --arg pr_url "$pr_url" \
+      '{pr_number: $pr_number, pr_title: $pr_title, pr_author: $pr_author, pr_url: $pr_url}')
 
     # Add to registry
     psm_add_session "$session_id" "review" "$alias" "pr-${pr_number}" "$head_branch" "$base_branch" "$session_name" "$worktree_path" "$local_path" "$metadata" "github" "${repo}#${pr_number}"
@@ -359,14 +357,12 @@ cmd_fix() {
     fi
 
     # Create metadata
-    local metadata=$(cat << EOF
-{
-  "issue_number": $issue_number,
-  "issue_title": $(echo "$issue_title" | jq -R .),
-  "issue_url": "$issue_url"
-}
-EOF
-)
+    local metadata
+    metadata=$(jq -n \
+      --argjson issue_number "$issue_number" \
+      --arg issue_title "$issue_title" \
+      --arg issue_url "$issue_url" \
+      '{issue_number: $issue_number, issue_title: $issue_title, issue_url: $issue_url}')
 
     psm_add_session "$session_id" "fix" "$alias" "issue-${issue_number}" "$branch_name" "$base" "$session_name" "$worktree_path" "$local_path" "$metadata" "$provider" "$provider_ref"
 

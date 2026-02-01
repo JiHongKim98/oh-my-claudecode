@@ -8,10 +8,20 @@ provider_list() {
     echo "github jira"
 }
 
+# Allowlist of valid providers
+readonly VALID_PROVIDERS="github jira"
+
 # Check if a provider is available (CLI installed)
 # Usage: provider_available "github"
 provider_available() {
     local provider="$1"
+
+    # Validate provider against allowlist
+    if ! echo "$VALID_PROVIDERS" | grep -qw "$provider"; then
+        echo "error|Invalid provider: $provider" >&2
+        return 1
+    fi
+
     "provider_${provider}_available"
 }
 
@@ -21,6 +31,19 @@ provider_call() {
     local provider="$1"
     local func="$2"
     shift 2
+
+    # Validate provider against allowlist
+    if ! echo "$VALID_PROVIDERS" | grep -qw "$provider"; then
+        echo "error|Invalid provider: $provider" >&2
+        return 1
+    fi
+
+    # Validate function name (alphanumeric and underscore only)
+    if [[ ! "$func" =~ ^[a-zA-Z_][a-zA-Z0-9_]*$ ]]; then
+        echo "error|Invalid function name: $func" >&2
+        return 1
+    fi
+
     "provider_${provider}_${func}" "$@"
 }
 

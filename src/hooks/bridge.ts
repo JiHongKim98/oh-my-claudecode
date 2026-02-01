@@ -66,6 +66,16 @@ import {
 } from './session-end/index.js';
 
 /**
+ * Validates that an input object contains all required fields.
+ * Returns true if all required fields are present, false otherwise.
+ */
+function validateHookInput<T>(input: unknown, requiredFields: string[]): input is T {
+  if (typeof input !== 'object' || input === null) return false;
+  const obj = input as Record<string, unknown>;
+  return requiredFields.every(field => field in obj && obj[field] !== undefined);
+}
+
+/**
  * Input format from Claude Code hooks (via stdin)
  */
 export interface HookInput {
@@ -479,22 +489,10 @@ function processPreToolUse(input: HookInput): HookOutput {
 
 /**
  * Process post-tool-use hook
- * Marks background tasks as completed
  */
-function processPostToolUse(input: HookInput): HookOutput {
-  const directory = input.directory || process.cwd();
-
-  // Track Task tool completion for HUD
-  if (input.toolName === 'Task') {
-    const toolInput = input.toolInput as {
-      description?: string;
-    } | undefined;
-
-    // We don't have the exact task ID, but the HUD state cleanup handles this
-    // For now, this is a placeholder - proper tracking would need tool_use_id
-    // which isn't reliably available in all hook scenarios
-  }
-
+function processPostToolUse(_input: HookInput): HookOutput {
+  // Post-tool-use hook - currently no action needed
+  // Task completion tracking would require tool_use_id which isn't reliably available
   return { continue: true };
 }
 
@@ -592,34 +590,58 @@ export async function processHook(
         return processAutopilot(input);
 
       // New async hook types
-      case 'session-end':
-        return await handleSessionEnd(input as unknown as SessionEndInput);
+      case 'session-end': {
+        if (!validateHookInput<SessionEndInput>(input, ['session_id', 'cwd'])) {
+          console.error('[hook-bridge] Invalid SessionEndInput - missing required fields');
+          return { continue: true };
+        }
+        return await handleSessionEnd(input as SessionEndInput);
+      }
 
-      case 'subagent-start':
-        return processSubagentStart(input as unknown as SubagentStartInput);
+      case 'subagent-start': {
+        if (!validateHookInput<SubagentStartInput>(input, ['session_id', 'cwd'])) {
+          console.error('[hook-bridge] Invalid SubagentStartInput - missing required fields');
+          return { continue: true };
+        }
+        return processSubagentStart(input as SubagentStartInput);
+      }
 
-      case 'subagent-stop':
-        return processSubagentStop(input as unknown as SubagentStopInput);
+      case 'subagent-stop': {
+        if (!validateHookInput<SubagentStopInput>(input, ['session_id', 'cwd'])) {
+          console.error('[hook-bridge] Invalid SubagentStopInput - missing required fields');
+          return { continue: true };
+        }
+        return processSubagentStop(input as SubagentStopInput);
+      }
 
-      case 'pre-compact':
-        return await processPreCompact(input as unknown as PreCompactInput);
+      case 'pre-compact': {
+        if (!validateHookInput<PreCompactInput>(input, ['session_id', 'cwd'])) {
+          console.error('[hook-bridge] Invalid PreCompactInput - missing required fields');
+          return { continue: true };
+        }
+        return await processPreCompact(input as PreCompactInput);
+      }
 
       case 'setup-init':
+      case 'setup-maintenance': {
+        if (!validateHookInput<SetupInput>(input, ['session_id', 'cwd'])) {
+          console.error('[hook-bridge] Invalid SetupInput - missing required fields');
+          return { continue: true };
+        }
         return await processSetup({
-          ...input,
-          trigger: 'init',
+          ...(input as SetupInput),
+          trigger: hookType === 'setup-init' ? 'init' : 'maintenance',
           hook_event_name: 'Setup'
-        } as unknown as SetupInput);
+        });
+      }
 
-      case 'setup-maintenance':
-        return await processSetup({
-          ...input,
-          trigger: 'maintenance',
-          hook_event_name: 'Setup'
-        } as unknown as SetupInput);
-
-      case 'permission-request':
-        return await handlePermissionRequest(input as unknown as PermissionRequestInput);
+      case 'permission-request': {
+        if (!validateHookInput<PermissionRequestInput>(input, ['session_id', 'cwd', 'tool_name'])) {
+          console.error('[hook-bridge] Invalid PermissionRequestInput - missing required fields');
+          return { continue: true };
+        }
+        return await handlePermissionRequest(input as PermissionRequestInput);
+      }
 
       default:
         return { continue: true };

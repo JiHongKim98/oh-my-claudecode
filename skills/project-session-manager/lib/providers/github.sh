@@ -41,5 +41,12 @@ provider_github_issue_closed() {
 
 provider_github_clone_url() {
     local repo="$1"
+
+    # Validate owner/repo format
+    if [[ ! "$repo" =~ ^[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+$ ]]; then
+        echo "error|Invalid repository format: $repo" >&2
+        return 1
+    fi
+
     echo "https://github.com/${repo}.git"
 }
