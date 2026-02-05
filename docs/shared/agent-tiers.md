@@ -163,3 +163,31 @@ For complex rename or refactoring tasks requiring implementation, delegate to `e
 - **Need single-file error checking?** Use `lsp_diagnostics` via many agents (see matrix)
 - **Need data analysis / computation?** Use `python_repl` via `scientist` agents (all tiers)
 - **Need quick type info or definition lookup?** Use `lsp_hover`/`lsp_goto_definition` directly (orchestrator-direct tools)
+
+### External AI Consultation (Codex & Gemini)
+
+All agents have access to `mcp__x__ask_codex` and `mcp__g__ask_gemini` via MCP. Route by agent domain:
+
+**Codex** (`ask_codex` — reviewers and planners only):
+
+| Agent | Use Case |
+|-------|----------|
+| `architect` / `architect-medium` / `architect-low` | Architecture trade-offs, debugging second opinions |
+| `planner` | Task breakdown feasibility, effort estimation |
+| `critic` | Implementation feasibility simulation |
+| `analyst` | Cross-validate analysis findings |
+| `code-reviewer` / `code-reviewer-low` | Cross-validate review findings |
+| `security-reviewer` / `security-reviewer-low` | Validate vulnerability assessments |
+| `tdd-guide` / `tdd-guide-low` | Test strategy validation, edge case coverage |
+
+**Gemini** (`ask_gemini` — designers only):
+
+| Agent | Use Case |
+|-------|----------|
+| `designer` / `designer-low` / `designer-high` | Design consistency across many components (1M context) |
+| `writer` | Documentation consistency across large codebases |
+| `vision` | Visual design consistency analysis |
+
+All other agents have **no external consultation recommendation**.
+
+**Protocol:** Always form your OWN analysis first, then optionally consult for validation. Never blindly adopt external output. Never block on unavailable tools.
