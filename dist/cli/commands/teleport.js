@@ -6,9 +6,9 @@
  */
 import chalk from 'chalk';
 import { execSync } from 'child_process';
-import { existsSync, mkdirSync } from 'fs';
+import { existsSync, mkdirSync, rmSync, readdirSync, statSync } from 'fs';
 import { homedir } from 'os';
-import { join, basename } from 'path';
+import { join, basename, isAbsolute, relative } from 'path';
 // Default worktree root directory
 const DEFAULT_WORKTREE_ROOT = join(homedir(), 'Workspace', 'omc-worktrees');
 /**
@@ -286,6 +286,38 @@ export async function teleportCommand(ref, options) {
     };
 }
 /**
+ * Find worktree directories by scanning for .git files (not directories)
+ */
+function findWorktreeDirs(dir, maxDepth = 3, currentDepth = 0) {
+    if (currentDepth >= maxDepth)
+        return [];
+    const results = [];
+    try {
+        const entries = readdirSync(dir, { withFileTypes: true });
+        for (const entry of entries) {
+            if (!entry.isDirectory())
+                continue;
+            const fullPath = join(dir, entry.name);
+            try {
+                const gitPath = join(fullPath, '.git');
+                const stat = statSync(gitPath);
+                if (stat.isFile()) {
+                    results.push(fullPath);
+                    continue; // Don't recurse into worktrees
+                }
+            }
+            catch {
+                // No .git file, recurse deeper
+            }
+            results.push(...findWorktreeDirs(fullPath, maxDepth, currentDepth + 1));
+        }
+    }
+    catch {
+        // Directory not readable
+    }
+    return results;
+}
+/**
  * List existing worktrees in the default location
  */
 export async function teleportListCommand(options) {
@@ -299,54 +331,36 @@ export async function teleportListCommand(options) {
         }
         return;
     }
-    try {
-        const result = execSync(`find "${worktreeRoot}" -maxdepth 3 -name ".git" -type f`, {
-            encoding: 'utf-8',
-        });
-        const worktrees = result
-            .trim()
-            .split('\n')
-            .filter(Boolean)
-            .map(gitFile => {
-            const worktreePath = gitFile.replace('/.git', '');
-            const relativePath = worktreePath.replace(worktreeRoot + '/', '');
-            // Try to get branch name
-            let branch = 'unknown';
-            try {
-                branch = execSync('git branch --show-current', {
-                    cwd: worktreePath,
-                    encoding: 'utf-8',
-                }).trim();
-            }
-            catch {
-                // Ignore
-            }
-            return { path: worktreePath, relativePath, branch };
-        });
-        if (options.json) {
-            console.log(JSON.stringify({ worktrees }, null, 2));
+    const worktreeDirs = findWorktreeDirs(worktreeRoot);
+    const worktrees = worktreeDirs.map(worktreePath => {
+        const relativePath = relative(worktreeRoot, worktreePath);
+        let branch = 'unknown';
+        try {
+            branch = execSync('git branch --show-current', {
+                cwd: worktreePath,
+                encoding: 'utf-8',
+            }).trim();
         }
-        else {
-            if (worktrees.length === 0) {
-                console.log(chalk.gray('No worktrees found.'));
-                return;
-            }
-            console.log(chalk.bold('\nOMC Worktrees:\n'));
-            console.log(chalk.gray('─'.repeat(60)));
-            for (const wt of worktrees) {
-                console.log(`  ${chalk.cyan(wt.relativePath)}`);
-                console.log(`    Branch: ${chalk.yellow(wt.branch)}`);
-                console.log(`    Path: ${chalk.gray(wt.path)}`);
-                console.log('');
-            }
+        catch {
+            // Ignore
         }
+        return { path: worktreePath, relativePath, branch };
+    });
+    if (options.json) {
+        console.log(JSON.stringify({ worktrees }, null, 2));
     }
-    catch {
-        if (options.json) {
-            console.log(JSON.stringify({ worktrees: [] }));
-        }
-        else {
+    else {
+        if (worktrees.length === 0) {
             console.log(chalk.gray('No worktrees found.'));
+            return;
+        }
+        console.log(chalk.bold('\nOMC Worktrees:\n'));
+        console.log(chalk.gray('─'.repeat(60)));
+        for (const wt of worktrees) {
+            console.log(`  ${chalk.cyan(wt.relativePath)}`);
+            console.log(`    Branch: ${chalk.yellow(wt.branch)}`);
+            console.log(`    Path: ${chalk.gray(wt.path)}`);
+            console.log('');
         }
     }
 }
@@ -357,7 +371,7 @@ export async function teleportRemoveCommand(pathOrName, options) {
     const worktreeRoot = DEFAULT_WORKTREE_ROOT;
     // Resolve path - could be relative name or full path
     let worktreePath = pathOrName;
-    if (!pathOrName.startsWith('/')) {
+    if (!isAbsolute(pathOrName)) {
         worktreePath = join(worktreeRoot, pathOrName);
     }
     if (!existsSync(worktreePath)) {
@@ -371,7 +385,8 @@ export async function teleportRemoveCommand(pathOrName, options) {
         return;
     }
     // Safety check: must be under worktree root
-    if (!worktreePath.startsWith(worktreeRoot)) {
+    const rel = relative(worktreeRoot, worktreePath);
+    if (rel.startsWith('..') || isAbsolute(rel)) {
         const error = `Refusing to remove worktree outside of ${worktreeRoot}`;
         if (options.json) {
             console.log(JSON.stringify({ success: false, error }));
@@ -406,7 +421,7 @@ export async function teleportRemoveCommand(pathOrName, options) {
         }).trim();
         // The git-dir will be something like /path/to/main/.git/worktrees/name
         // We need to get back to the main repo
-        const mainRepoMatch = gitDir.match(/(.+)\/\.git\/worktrees\//);
+        const mainRepoMatch = gitDir.match(/(.+)[/\\]\.git[/\\]worktrees[/\\]/);
         const mainRepo = mainRepoMatch ? mainRepoMatch[1] : null;
         if (mainRepo) {
             const forceFlag = options.force ? '--force' : '';
@@ -417,7 +432,7 @@ export async function teleportRemoveCommand(pathOrName, options) {
         }
         else {
             // Fallback: just remove the directory
-            execSync(`rm -rf "${worktreePath}"`, { stdio: 'pipe' });
+            rmSync(worktreePath, { recursive: true, force: true });
         }
         if (options.json) {
             console.log(JSON.stringify({ success: true, removed: worktreePath }));

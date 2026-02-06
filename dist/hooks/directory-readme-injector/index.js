@@ -8,7 +8,7 @@
  * Adapted for Claude Code's shell hook system.
  */
 import { existsSync, readFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { loadInjectedPaths, saveInjectedPaths, clearInjectedPaths, } from './storage.js';
 import { README_FILENAME, TRACKED_TOOLS } from './constants.js';
 // Re-export submodules
@@ -49,12 +49,12 @@ export function createDirectoryReadmeInjectorHook(workingDirectory) {
         }
         return sessionCaches.get(sessionID);
     }
-    function resolveFilePath(path) {
-        if (!path)
+    function resolveFilePath(filePath) {
+        if (!filePath)
             return null;
-        if (path.startsWith('/'))
-            return path;
-        return resolve(workingDirectory, path);
+        if (isAbsolute(filePath))
+            return filePath;
+        return resolve(workingDirectory, filePath);
     }
     /**
      * Find README.md files by walking up the directory tree.

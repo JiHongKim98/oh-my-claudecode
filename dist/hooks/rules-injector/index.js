@@ -9,7 +9,7 @@
  */
 import { readFileSync } from 'fs';
 import { homedir } from 'os';
-import { relative, resolve } from 'path';
+import { isAbsolute, relative, resolve } from 'path';
 import { findProjectRoot, findRuleFiles } from './finder.js';
 import { createContentHash, isDuplicateByContentHash, isDuplicateByRealPath, shouldApplyRule, } from './matcher.js';
 import { parseRuleFrontmatter } from './parser.js';
@@ -36,12 +36,12 @@ export function createRulesInjectorHook(workingDirectory) {
         }
         return sessionCaches.get(sessionId);
     }
-    function resolveFilePath(path) {
-        if (!path)
+    function resolveFilePath(filePath) {
+        if (!filePath)
             return null;
-        if (path.startsWith('/'))
-            return path;
-        return resolve(workingDirectory, path);
+        if (isAbsolute(filePath))
+            return filePath;
+        return resolve(workingDirectory, filePath);
     }
     /**
      * Process a file path and return rules to inject.

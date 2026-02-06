@@ -8,7 +8,8 @@
 export declare const HOOK_NAME = "omc-orchestrator";
 /** @deprecated Use ALLOWED_PATH_PATTERNS instead. Legacy single prefix. */
 export declare const ALLOWED_PATH_PREFIX = ".omc/";
-/** Path patterns that orchestrator IS allowed to modify directly */
+/** Path patterns that orchestrator IS allowed to modify directly.
+ *  Paths are normalized to forward slashes before matching (via toForwardSlash). */
 export declare const ALLOWED_PATH_PATTERNS: RegExp[];
 /** Source file extensions that should trigger delegation warnings */
 export declare const WARNED_EXTENSIONS: string[];

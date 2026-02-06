@@ -15,10 +15,11 @@ const __dirname = dirname(__filename);
 const { readStdin } = await import(path.join(__dirname, 'lib', 'stdin.mjs'));
 
 // Allowed path patterns (no warning)
+// Paths are normalized to forward slashes before matching
 const ALLOWED_PATH_PATTERNS = [
-  /\.omc[/\\]/,
-  /\.claude[/\\]/,
-  /[/\\]\.claude[/\\]/,
+  /\.omc\//,
+  /\.claude\//,
+  /\/\.claude\//,
   /CLAUDE\.md$/,
   /AGENTS\.md$/,
 ];
