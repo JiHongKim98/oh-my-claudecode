@@ -15,6 +15,7 @@ import { join, dirname } from 'path';
 import { homedir } from 'os';
 import { execSync } from 'child_process';
 import { TaskTool } from '../hooks/beads-context/types.js';
+import { install as installSisyphus, HOOKS_DIR, isProjectScopedPlugin } from '../installer/index.js';
 
 /** GitHub repository information */
 export const REPO_OWNER = 'Yeachan-Heo';
@@ -199,6 +200,12 @@ export interface UpdateResult {
   errors?: string[];
 }
 
+export interface UpdateReconcileResult {
+  success: boolean;
+  message: string;
+  errors?: string[];
+}
+
 /**
  * Read the current version metadata
  */
@@ -349,6 +356,58 @@ export async function checkForUpdates(): Promise<UpdateCheckResult> {
 }
 
 /**
+ * Reconcile runtime state after update
+ *
+ * This is safe to run repeatedly and refreshes local runtime artifacts that may
+ * lag behind an updated package or plugin cache.
+ */
+export function reconcileUpdateRuntime(options?: { verbose?: boolean }): UpdateReconcileResult {
+  const errors: string[] = [];
+
+  const projectScopedPlugin = isProjectScopedPlugin();
+  if (!projectScopedPlugin) {
+    try {
+      if (!existsSync(HOOKS_DIR)) {
+        mkdirSync(HOOKS_DIR, { recursive: true });
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      errors.push(`Failed to prepare hooks directory: ${message}`);
+    }
+  }
+
+  try {
+    const installResult = installSisyphus({
+      force: true,
+      verbose: options?.verbose ?? false,
+      skipClaudeCheck: true,
+      forceHooks: true,
+      refreshHooksInPlugin: !projectScopedPlugin,
+    });
+
+    if (!installResult.success) {
+      errors.push(...installResult.errors);
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    errors.push(`Failed to refresh installer artifacts: ${message}`);
+  }
+
+  if (errors.length > 0) {
+    return {
+      success: false,
+      message: 'Runtime reconciliation failed',
+      errors,
+    };
+  }
+
+  return {
+    success: true,
+    message: 'Runtime state reconciled successfully',
+  };
+}
+
+/**
  * Download and execute the install script to perform an update
  */
 export async function performUpdate(options?: {
@@ -372,7 +431,18 @@ export async function performUpdate(options?: {
         ...(process.platform === 'win32' ? { windowsHide: true } : {})
       });
 
-      // Update version metadata
+      const reconcileResult = reconcileUpdateRuntime({ verbose: options?.verbose });
+      if (!reconcileResult.success) {
+        return {
+          success: false,
+          previousVersion,
+          newVersion,
+          message: `Updated to ${newVersion}, but runtime reconciliation failed`,
+          errors: reconcileResult.errors,
+        };
+      }
+
+      // Update version metadata after reconciliation succeeds
       saveVersionMetadata({
         version: newVersion,
         installedAt: new Date().toISOString(),
