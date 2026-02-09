@@ -19,6 +19,7 @@ import { pythonReplTool } from '../tools/python-repl/tool.js';
 import { stateTools } from '../tools/state-tools.js';
 import { notepadTools } from '../tools/notepad-tools.js';
 import { memoryTools } from '../tools/memory-tools.js';
+import { traceTools } from '../tools/trace-tools.js';
 import { z } from 'zod';
 // Aggregate all tools - AST tools gracefully degrade if @ast-grep/napi is unavailable
 const allTools = [
@@ -28,6 +29,7 @@ const allTools = [
     ...stateTools,
     ...notepadTools,
     ...memoryTools,
+    ...traceTools,
 ];
 // Convert Zod schema to JSON Schema for MCP
 function zodToJsonSchema(schema) {

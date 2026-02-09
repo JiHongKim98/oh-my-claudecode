@@ -1,6 +1,13 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { resolveDelegation, parseFallbackChain } from '../resolver.js';
 describe('resolveDelegation', () => {
+    let consoleWarnSpy;
+    beforeEach(() => {
+        consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => { });
+    });
+    afterEach(() => {
+        consoleWarnSpy.mockRestore();
+    });
     // Test 1: Explicit tool takes highest precedence
     it('should use explicit tool when provided', () => {
         const result = resolveDelegation({
@@ -40,6 +47,9 @@ describe('resolveDelegation', () => {
             config: { enabled: true, defaultProvider: 'codex' }
         });
         expect(result.provider).toBe('codex');
+        expect(result.tool).toBe('ask_codex');
+        expect(result.agentOrModel).toBe('gpt-5.3-codex');
+        expect(result.reason).toContain('Fallback to default provider');
     });
     // Test 5: Empty config uses defaults
     it('should use defaults when config is empty', () => {
@@ -157,6 +167,10 @@ describe('resolveDelegation', () => {
                 }
             }
         });
+        expect(result.provider).toBe('gemini');
+        expect(result.tool).toBe('ask_gemini');
+        expect(result.agentOrModel).toBe('gemini-2.5-pro');
+        expect(result.reason).toContain('Configured routing');
         expect(result.fallbackChain).toEqual(['claude:explore', 'codex:gpt-5']);
     });
     // Test 14: defaultProvider set to gemini
@@ -180,6 +194,8 @@ describe('resolveDelegation', () => {
         });
         expect(result.provider).toBe('claude');
         expect(result.tool).toBe('Task');
+        expect(result.agentOrModel).toBe('nonexistent-role');
+        expect(result.reason).toContain('Fallback to Claude Task');
     });
     // Test 16: Config explicitly enabled undefined (should be treated as disabled)
     it('should treat undefined enabled as disabled', () => {
@@ -192,6 +208,8 @@ describe('resolveDelegation', () => {
         // When enabled is undefined, isDelegationEnabled returns false
         expect(result.provider).toBe('claude');
         expect(result.tool).toBe('Task');
+        expect(result.agentOrModel).toBe('explore');
+        expect(result.reason).toContain('Default heuristic');
     });
     // Test 17: Empty roles object with enabled true
     it('should use defaults when roles object is empty', () => {
@@ -201,6 +219,8 @@ describe('resolveDelegation', () => {
         });
         expect(result.provider).toBe('claude');
         expect(result.tool).toBe('Task');
+        expect(result.agentOrModel).toBe('architect');
+        expect(result.reason).toContain('Default heuristic');
     });
     // Test 18: All known role categories use defaults correctly
     it.each([
@@ -253,6 +273,69 @@ describe('resolveDelegation', () => {
             }
         });
         expect(result.agentOrModel).toBe('custom-model');
+    });
+    // Test: Provider/tool mismatch logs warning
+    it('should log warning when provider/tool mismatch is corrected', () => {
+        resolveDelegation({
+            agentRole: 'test-role',
+            config: {
+                enabled: true,
+                roles: {
+                    'test-role': { provider: 'claude', tool: 'ask_codex', model: 'test' }
+                }
+            }
+        });
+        expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining('Provider/tool mismatch'));
+        expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining('claude'));
+        expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining('ask_codex'));
+    });
+    // Test: Unknown role + defaultProvider: 'gemini' with full assertion
+    it('should handle unknown role with gemini defaultProvider', () => {
+        const result = resolveDelegation({
+            agentRole: 'totally-unknown-role',
+            config: { enabled: true, defaultProvider: 'gemini' }
+        });
+        expect(result.provider).toBe('gemini');
+        expect(result.tool).toBe('ask_gemini');
+        expect(result.agentOrModel).toBe('gemini-2.5-pro');
+        expect(result.reason).toContain('Fallback to default provider: gemini');
+        expect(result.fallbackChain).toBeUndefined();
+    });
+    // Test: Unknown role + defaultProvider: 'codex' with full assertion
+    it('should handle unknown role with codex defaultProvider', () => {
+        const result = resolveDelegation({
+            agentRole: 'totally-unknown-role',
+            config: { enabled: true, defaultProvider: 'codex' }
+        });
+        expect(result.provider).toBe('codex');
+        expect(result.tool).toBe('ask_codex');
+        expect(result.agentOrModel).toBe('gpt-5.3-codex');
+        expect(result.reason).toContain('Fallback to default provider: codex');
+        expect(result.fallbackChain).toBeUndefined();
+    });
+    // Test: Unknown role + defaultProvider: 'claude' (explicit) with full assertion
+    it('should handle unknown role with claude defaultProvider', () => {
+        const result = resolveDelegation({
+            agentRole: 'totally-unknown-role',
+            config: { enabled: true, defaultProvider: 'claude' }
+        });
+        expect(result.provider).toBe('claude');
+        expect(result.tool).toBe('Task');
+        expect(result.agentOrModel).toBe('totally-unknown-role');
+        expect(result.reason).toContain('Fallback to Claude Task');
+        expect(result.fallbackChain).toBeUndefined();
+    });
+    // Test: Known role + defaultProvider (should use heuristic, not defaultProvider)
+    it('should use heuristic for known role even with different defaultProvider', () => {
+        const result = resolveDelegation({
+            agentRole: 'architect',
+            config: { enabled: true, defaultProvider: 'gemini' }
+        });
+        // architect is in ROLE_CATEGORY_DEFAULTS, so should use Claude subagent
+        expect(result.provider).toBe('claude');
+        expect(result.tool).toBe('Task');
+        expect(result.agentOrModel).toBe('architect');
+        expect(result.reason).toContain('Default heuristic');
     });
 });
 describe('parseFallbackChain', () => {
