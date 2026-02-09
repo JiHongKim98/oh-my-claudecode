@@ -21057,6 +21057,15 @@ function getWorktreeProjectMemoryPath(worktreeRoot) {
   return (0, import_path7.join)(root, OmcPaths.PROJECT_MEMORY);
 }
 var SESSION_ID_REGEX = /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,255}$/;
+var processSessionId = null;
+function getProcessSessionId() {
+  if (!processSessionId) {
+    const pid = process.pid;
+    const startTime = Date.now();
+    processSessionId = `pid-${pid}-${startTime}`;
+  }
+  return processSessionId;
+}
 function validateSessionId(sessionId) {
   if (!sessionId) {
     throw new Error("Session ID cannot be empty");
@@ -21365,7 +21374,7 @@ var stateReadTool = {
     const { mode, workingDirectory, session_id } = args;
     try {
       const root = validateWorkingDirectory(workingDirectory);
-      const sessionId = session_id;
+      const sessionId = session_id || getProcessSessionId();
       if (mode === "swarm") {
         const statePath2 = getStatePath(mode, root);
         if (!(0, import_fs8.existsSync)(statePath2)) {
@@ -21540,7 +21549,7 @@ var stateWriteTool = {
     } = args;
     try {
       const root = validateWorkingDirectory(workingDirectory);
-      const sessionId = session_id;
+      const sessionId = session_id || getProcessSessionId();
       if (mode === "swarm") {
         return {
           content: [{
@@ -21620,7 +21629,7 @@ var stateClearTool = {
     const { mode, workingDirectory, session_id } = args;
     try {
       const root = validateWorkingDirectory(workingDirectory);
-      const sessionId = session_id;
+      const sessionId = session_id || getProcessSessionId();
       if (sessionId) {
         validateSessionId(sessionId);
         if (MODE_CONFIGS[mode]) {
@@ -21740,7 +21749,7 @@ var stateListActiveTool = {
     const { workingDirectory, session_id } = args;
     try {
       const root = validateWorkingDirectory(workingDirectory);
-      const sessionId = session_id;
+      const sessionId = session_id || getProcessSessionId();
       if (sessionId) {
         validateSessionId(sessionId);
         const activeModes = [...getActiveModes(root, sessionId)];
@@ -21856,7 +21865,7 @@ var stateGetStatusTool = {
     const { mode, workingDirectory, session_id } = args;
     try {
       const root = validateWorkingDirectory(workingDirectory);
-      const sessionId = session_id;
+      const sessionId = session_id || getProcessSessionId();
       if (mode) {
         const lines2 = [`## Status: ${mode}
 `];
@@ -22941,6 +22950,546 @@ var memoryTools = [
   projectMemoryAddDirectiveTool
 ];
 
+// src/tools/trace-tools.ts
+var import_fs12 = require("fs");
+var import_path17 = require("path");
+
+// src/hooks/subagent-tracker/session-replay.ts
+var import_fs11 = require("fs");
+var import_path16 = require("path");
+var REPLAY_PREFIX = "agent-replay-";
+var MAX_REPLAY_SIZE_BYTES = 5 * 1024 * 1024;
+function getReplayFilePath(directory, sessionId) {
+  const stateDir = (0, import_path16.join)(directory, ".omc", "state");
+  if (!(0, import_fs11.existsSync)(stateDir)) {
+    (0, import_fs11.mkdirSync)(stateDir, { recursive: true });
+  }
+  const safeId = sessionId.replace(/[^a-zA-Z0-9_-]/g, "_");
+  return (0, import_path16.join)(stateDir, `${REPLAY_PREFIX}${safeId}.jsonl`);
+}
+function readReplayEvents(directory, sessionId) {
+  const filePath = getReplayFilePath(directory, sessionId);
+  if (!(0, import_fs11.existsSync)(filePath)) return [];
+  try {
+    const content = (0, import_fs11.readFileSync)(filePath, "utf-8");
+    return content.split("\n").filter((line) => line.trim()).map((line) => {
+      try {
+        return JSON.parse(line);
+      } catch {
+        return null;
+      }
+    }).filter((e) => e !== null);
+  } catch {
+    return [];
+  }
+}
+function detectCycles(sequence) {
+  if (sequence.length < 2) return { cycles: 0, pattern: "" };
+  for (let patLen = 2; patLen <= Math.floor(sequence.length / 2); patLen++) {
+    const candidate = sequence.slice(0, patLen);
+    let fullCycles = 0;
+    for (let i = 0; i + patLen <= sequence.length; i += patLen) {
+      const chunk = sequence.slice(i, i + patLen);
+      if (chunk.every((v, idx) => v === candidate[idx])) {
+        fullCycles++;
+      } else {
+        break;
+      }
+    }
+    if (fullCycles >= 2) {
+      return {
+        cycles: fullCycles,
+        pattern: candidate.join("/")
+      };
+    }
+  }
+  return { cycles: 0, pattern: "" };
+}
+function getReplaySummary(directory, sessionId) {
+  const events = readReplayEvents(directory, sessionId);
+  const summary = {
+    session_id: sessionId,
+    duration_seconds: 0,
+    total_events: events.length,
+    agents_spawned: 0,
+    agents_completed: 0,
+    agents_failed: 0,
+    tool_summary: {},
+    bottlenecks: [],
+    timeline_range: { start: 0, end: 0 },
+    files_touched: []
+  };
+  if (events.length === 0) return summary;
+  summary.timeline_range.start = events[0].t;
+  summary.timeline_range.end = events[events.length - 1].t;
+  summary.duration_seconds = summary.timeline_range.end - summary.timeline_range.start;
+  const filesSet = /* @__PURE__ */ new Set();
+  const agentToolTimings = /* @__PURE__ */ new Map();
+  const agentTypeStats = /* @__PURE__ */ new Map();
+  const agentTypeSequence = [];
+  for (const event of events) {
+    switch (event.event) {
+      case "agent_start":
+        summary.agents_spawned++;
+        if (event.agent_type) {
+          const type = event.agent_type;
+          if (!agentTypeStats.has(type)) {
+            agentTypeStats.set(type, { count: 0, total_ms: 0, models: /* @__PURE__ */ new Set() });
+          }
+          agentTypeStats.get(type).count++;
+          if (event.model) agentTypeStats.get(type).models.add(event.model);
+          agentTypeSequence.push(type);
+        }
+        break;
+      case "agent_stop":
+        if (event.success) summary.agents_completed++;
+        else summary.agents_failed++;
+        if (event.agent_type && event.duration_ms) {
+          const stats = agentTypeStats.get(event.agent_type);
+          if (stats) stats.total_ms += event.duration_ms;
+        }
+        break;
+      case "tool_end":
+        if (event.tool) {
+          if (!summary.tool_summary[event.tool]) {
+            summary.tool_summary[event.tool] = { count: 0, total_ms: 0, avg_ms: 0, max_ms: 0 };
+          }
+          const ts = summary.tool_summary[event.tool];
+          ts.count++;
+          if (event.duration_ms) {
+            ts.total_ms += event.duration_ms;
+            ts.max_ms = Math.max(ts.max_ms, event.duration_ms);
+            ts.avg_ms = Math.round(ts.total_ms / ts.count);
+          }
+          if (event.agent && event.duration_ms) {
+            if (!agentToolTimings.has(event.agent)) {
+              agentToolTimings.set(event.agent, /* @__PURE__ */ new Map());
+            }
+            const agentTools = agentToolTimings.get(event.agent);
+            if (!agentTools.has(event.tool)) {
+              agentTools.set(event.tool, []);
+            }
+            agentTools.get(event.tool).push(event.duration_ms);
+          }
+        }
+        break;
+      case "file_touch":
+        if (event.file) filesSet.add(event.file);
+        break;
+      case "hook_fire":
+        if (!summary.hooks_fired) summary.hooks_fired = 0;
+        summary.hooks_fired++;
+        break;
+      case "keyword_detected":
+        if (!summary.keywords_detected) summary.keywords_detected = [];
+        if (event.keyword && !summary.keywords_detected.includes(event.keyword)) {
+          summary.keywords_detected.push(event.keyword);
+        }
+        break;
+      case "skill_activated":
+        if (!summary.skills_activated) summary.skills_activated = [];
+        if (event.skill_name && !summary.skills_activated.includes(event.skill_name)) {
+          summary.skills_activated.push(event.skill_name);
+        }
+        break;
+      case "skill_invoked":
+        if (!summary.skills_invoked) summary.skills_invoked = [];
+        if (event.skill_name && !summary.skills_invoked.includes(event.skill_name)) {
+          summary.skills_invoked.push(event.skill_name);
+        }
+        break;
+      case "mode_change":
+        if (!summary.mode_transitions) summary.mode_transitions = [];
+        if (event.mode_from !== void 0 && event.mode_to !== void 0) {
+          summary.mode_transitions.push({ from: event.mode_from, to: event.mode_to, at: event.t });
+        }
+        break;
+    }
+  }
+  summary.files_touched = Array.from(filesSet);
+  if (agentTypeStats.size > 0) {
+    summary.agent_breakdown = [];
+    for (const [type, stats] of agentTypeStats) {
+      summary.agent_breakdown.push({
+        type,
+        count: stats.count,
+        total_ms: stats.total_ms,
+        avg_ms: stats.count > 0 ? Math.round(stats.total_ms / stats.count) : 0,
+        models: Array.from(stats.models)
+      });
+    }
+    summary.agent_breakdown.sort((a, b) => b.count - a.count);
+  }
+  if (agentTypeSequence.length >= 2) {
+    const { cycles, pattern } = detectCycles(agentTypeSequence);
+    if (cycles > 0) {
+      summary.cycle_count = cycles;
+      summary.cycle_pattern = pattern;
+    }
+  }
+  for (const [agent, tools] of agentToolTimings) {
+    for (const [tool, durations] of tools) {
+      if (durations.length >= 2) {
+        const avg = Math.round(durations.reduce((a, b) => a + b, 0) / durations.length);
+        if (avg > 1e3) {
+          summary.bottlenecks.push({ tool, agent, avg_ms: avg });
+        }
+      }
+    }
+  }
+  summary.bottlenecks.sort((a, b) => b.avg_ms - a.avg_ms);
+  return summary;
+}
+
+// src/tools/trace-tools.ts
+var REPLAY_PREFIX2 = "agent-replay-";
+function findLatestSessionId(directory) {
+  const stateDir = (0, import_path17.join)(directory, ".omc", "state");
+  try {
+    const files = (0, import_fs12.readdirSync)(stateDir).filter((f) => f.startsWith(REPLAY_PREFIX2) && f.endsWith(".jsonl")).map((f) => ({
+      name: f,
+      sessionId: f.slice(REPLAY_PREFIX2.length, -".jsonl".length),
+      mtime: (0, import_fs12.statSync)((0, import_path17.join)(stateDir, f)).mtimeMs
+    })).sort((a, b) => b.mtime - a.mtime);
+    return files.length > 0 ? files[0].sessionId : null;
+  } catch {
+    return null;
+  }
+}
+function formatEventType(event) {
+  const map = {
+    agent_start: "AGENT",
+    agent_stop: "AGENT",
+    tool_start: "TOOL",
+    tool_end: "TOOL",
+    file_touch: "FILE",
+    intervention: "INTERVENE",
+    error: "ERROR",
+    hook_fire: "HOOK",
+    hook_result: "HOOK",
+    keyword_detected: "KEYWORD",
+    skill_activated: "SKILL",
+    skill_invoked: "SKILL",
+    mode_change: "MODE"
+  };
+  return (map[event] || event.toUpperCase()).padEnd(9);
+}
+function formatTimelineEvent(event) {
+  const time3 = `${event.t.toFixed(1)}s`.padStart(7);
+  const type = formatEventType(event.event);
+  let detail = "";
+  switch (event.event) {
+    case "agent_start":
+      detail = `[${event.agent}] ${event.agent_type || "unknown"} started`;
+      if (event.task) detail += ` "${event.task}"`;
+      if (event.model) detail += ` (${event.model})`;
+      break;
+    case "agent_stop":
+      detail = `[${event.agent}] ${event.agent_type || "unknown"} ${event.success ? "completed" : "FAILED"}`;
+      if (event.duration_ms) detail += ` (${(event.duration_ms / 1e3).toFixed(1)}s)`;
+      break;
+    case "tool_start":
+      detail = `[${event.agent}] ${event.tool} started`;
+      break;
+    case "tool_end":
+      detail = `[${event.agent}] ${event.tool}`;
+      if (event.duration_ms) detail += ` (${event.duration_ms}ms)`;
+      if (event.success === false) detail += " FAILED";
+      break;
+    case "file_touch":
+      detail = `[${event.agent}] ${event.file}`;
+      break;
+    case "intervention":
+      detail = `[${event.agent}] ${event.reason}`;
+      break;
+    case "error":
+      detail = `[${event.agent}] ${event.reason || "unknown error"}`;
+      break;
+    case "hook_fire":
+      detail = `${event.hook} fired (${event.hook_event})`;
+      break;
+    case "hook_result":
+      detail = `${event.hook} result`;
+      if (event.duration_ms) detail += ` (${event.duration_ms}ms`;
+      if (event.context_injected) detail += `, context: ${event.context_length || "?"}B`;
+      if (event.duration_ms) detail += ")";
+      break;
+    case "keyword_detected":
+      detail = `"${event.keyword}" detected`;
+      break;
+    case "skill_activated":
+      detail = `${event.skill_name} activated (${event.skill_source})`;
+      break;
+    case "skill_invoked":
+      detail = `${event.skill_name} invoked (via Skill tool)`;
+      break;
+    case "mode_change":
+      detail = `${event.mode_from} -> ${event.mode_to}`;
+      break;
+    default:
+      detail = JSON.stringify(event);
+  }
+  return `${time3}  ${type} ${detail}`;
+}
+function filterEvents(events, filter) {
+  if (filter === "all") return events;
+  const filterMap = {
+    all: [],
+    hooks: ["hook_fire", "hook_result"],
+    skills: ["skill_activated", "skill_invoked"],
+    agents: ["agent_start", "agent_stop"],
+    keywords: ["keyword_detected"],
+    tools: ["tool_start", "tool_end"],
+    modes: ["mode_change"]
+  };
+  const allowed = filterMap[filter];
+  if (!allowed) return events;
+  return events.filter((e) => allowed.includes(e.event));
+}
+function buildExecutionFlow(events) {
+  const flow = [];
+  const KEY_EVENTS = /* @__PURE__ */ new Set([
+    "keyword_detected",
+    "skill_activated",
+    "skill_invoked",
+    "mode_change",
+    "agent_start",
+    "agent_stop"
+  ]);
+  for (const event of events) {
+    if (!KEY_EVENTS.has(event.event)) continue;
+    switch (event.event) {
+      case "keyword_detected":
+        flow.push(`Keyword "${event.keyword}" detected`);
+        break;
+      case "skill_activated":
+        flow.push(`${event.skill_name} skill activated (${event.skill_source})`);
+        break;
+      case "skill_invoked":
+        flow.push(`${event.skill_name} invoked (via Skill tool)`);
+        break;
+      case "mode_change":
+        flow.push(`Mode: ${event.mode_from} -> ${event.mode_to}`);
+        break;
+      case "agent_start": {
+        const type = event.agent_type || "unknown";
+        const model = event.model ? `, ${event.model}` : "";
+        flow.push(`${type} agent spawned (${event.agent}${model})`);
+        break;
+      }
+      case "agent_stop": {
+        const type = event.agent_type || "unknown";
+        const status = event.success ? "completed" : "FAILED";
+        const dur = event.duration_ms ? ` ${(event.duration_ms / 1e3).toFixed(1)}s` : "";
+        flow.push(`${type} agent ${status} (${event.agent}${dur})`);
+        break;
+      }
+    }
+  }
+  return flow;
+}
+var traceTimelineTool = {
+  name: "trace_timeline",
+  description: "Show chronological agent flow trace timeline. Displays hooks, keywords, skills, agents, and tools in time order. Use filter to show specific event types.",
+  schema: {
+    sessionId: external_exports.string().optional().describe("Session ID (auto-detects latest if omitted)"),
+    filter: external_exports.enum(["all", "hooks", "skills", "agents", "keywords", "tools", "modes"]).optional().describe("Filter to show specific event types (default: all)"),
+    last: external_exports.number().optional().describe("Limit to last N events"),
+    workingDirectory: external_exports.string().optional().describe("Working directory (defaults to cwd)")
+  },
+  handler: async (args) => {
+    const { sessionId: requestedSessionId, filter = "all", last, workingDirectory } = args;
+    try {
+      const root = validateWorkingDirectory(workingDirectory);
+      const sessionId = requestedSessionId || findLatestSessionId(root);
+      if (!sessionId) {
+        return {
+          content: [{
+            type: "text",
+            text: "## Agent Flow Trace\n\nNo trace sessions found. Traces are recorded automatically during agent execution."
+          }]
+        };
+      }
+      let events = readReplayEvents(root, sessionId);
+      if (events.length === 0) {
+        return {
+          content: [{
+            type: "text",
+            text: `## Agent Flow Trace (session: ${sessionId})
+
+No events recorded for this session.`
+          }]
+        };
+      }
+      events = filterEvents(events, filter);
+      if (last && last > 0 && events.length > last) {
+        events = events.slice(-last);
+      }
+      const duration3 = events.length > 0 ? (events[events.length - 1].t - events[0].t).toFixed(1) : "0.0";
+      const lines = [
+        `## Agent Flow Trace (session: ${sessionId})`,
+        `Duration: ${duration3}s | Events: ${events.length}${filter !== "all" ? ` | Filter: ${filter}` : ""}`,
+        ""
+      ];
+      for (const event of events) {
+        lines.push(formatTimelineEvent(event));
+      }
+      return {
+        content: [{
+          type: "text",
+          text: lines.join("\n")
+        }]
+      };
+    } catch (error2) {
+      return {
+        content: [{
+          type: "text",
+          text: `Error reading trace: ${error2 instanceof Error ? error2.message : String(error2)}`
+        }]
+      };
+    }
+  }
+};
+var traceSummaryTool = {
+  name: "trace_summary",
+  description: "Show aggregate statistics for an agent flow trace session. Includes hook stats, keyword frequencies, skill activations, mode transitions, and tool bottlenecks.",
+  schema: {
+    sessionId: external_exports.string().optional().describe("Session ID (auto-detects latest if omitted)"),
+    workingDirectory: external_exports.string().optional().describe("Working directory (defaults to cwd)")
+  },
+  handler: async (args) => {
+    const { sessionId: requestedSessionId, workingDirectory } = args;
+    try {
+      const root = validateWorkingDirectory(workingDirectory);
+      const sessionId = requestedSessionId || findLatestSessionId(root);
+      if (!sessionId) {
+        return {
+          content: [{
+            type: "text",
+            text: "## Trace Summary\n\nNo trace sessions found."
+          }]
+        };
+      }
+      const summary = getReplaySummary(root, sessionId);
+      if (summary.total_events === 0) {
+        return {
+          content: [{
+            type: "text",
+            text: `## Trace Summary (session: ${sessionId})
+
+No events recorded.`
+          }]
+        };
+      }
+      const lines = [
+        `## Trace Summary (session: ${sessionId})`,
+        "",
+        `### Overview`,
+        `- **Duration:** ${summary.duration_seconds.toFixed(1)}s`,
+        `- **Total Events:** ${summary.total_events}`,
+        `- **Agents:** ${summary.agents_spawned} spawned, ${summary.agents_completed} completed, ${summary.agents_failed} failed`,
+        ""
+      ];
+      if (summary.agent_breakdown && summary.agent_breakdown.length > 0) {
+        lines.push(`### Agent Activity`);
+        lines.push("| Agent | Invocations | Total Time | Model | Avg Duration |");
+        lines.push("|-------|-------------|------------|-------|--------------|");
+        for (const ab of summary.agent_breakdown) {
+          const totalSec = ab.total_ms > 0 ? `${(ab.total_ms / 1e3).toFixed(1)}s` : "-";
+          const avgSec = ab.avg_ms > 0 ? `${(ab.avg_ms / 1e3).toFixed(1)}s` : "-";
+          const models = ab.models.length > 0 ? ab.models.join(", ") : "-";
+          lines.push(`| ${ab.type} | ${ab.count} | ${totalSec} | ${models} | ${avgSec} |`);
+        }
+        if (summary.cycle_count && summary.cycle_pattern) {
+          lines.push(`> ${summary.cycle_count} ${summary.cycle_pattern} cycle(s) detected`);
+        }
+        lines.push("");
+      }
+      if (summary.skills_invoked && summary.skills_invoked.length > 0) {
+        lines.push(`### Skills Invoked`);
+        for (const skill of summary.skills_invoked) {
+          lines.push(`- ${skill}`);
+        }
+        lines.push("");
+      }
+      if (summary.skills_activated && summary.skills_activated.length > 0) {
+        lines.push(`### Skills Activated`);
+        for (const skill of summary.skills_activated) {
+          lines.push(`- ${skill}`);
+        }
+        lines.push("");
+      }
+      if (summary.hooks_fired) {
+        lines.push(`### Hooks`);
+        lines.push(`- **Hooks fired:** ${summary.hooks_fired}`);
+        lines.push("");
+      }
+      if (summary.keywords_detected && summary.keywords_detected.length > 0) {
+        lines.push(`### Keywords Detected`);
+        for (const kw of summary.keywords_detected) {
+          lines.push(`- ${kw}`);
+        }
+        lines.push("");
+      }
+      if (summary.mode_transitions && summary.mode_transitions.length > 0) {
+        lines.push(`### Mode Transitions`);
+        for (const t of summary.mode_transitions) {
+          lines.push(`- ${t.from} -> ${t.to} (at ${t.at.toFixed(1)}s)`);
+        }
+        lines.push("");
+      }
+      const flowEvents = buildExecutionFlow(readReplayEvents(root, sessionId));
+      if (flowEvents.length > 0) {
+        lines.push(`### Execution Flow`);
+        for (let i = 0; i < flowEvents.length; i++) {
+          lines.push(`${i + 1}. ${flowEvents[i]}`);
+        }
+        lines.push("");
+      }
+      const toolEntries = Object.entries(summary.tool_summary);
+      if (toolEntries.length > 0) {
+        lines.push(`### Tool Performance`);
+        lines.push("| Tool | Calls | Avg (ms) | Max (ms) | Total (ms) |");
+        lines.push("|------|-------|----------|----------|------------|");
+        for (const [tool, stats] of toolEntries.sort((a, b) => b[1].total_ms - a[1].total_ms)) {
+          lines.push(`| ${tool} | ${stats.count} | ${stats.avg_ms} | ${stats.max_ms} | ${stats.total_ms} |`);
+        }
+        lines.push("");
+      }
+      if (summary.bottlenecks.length > 0) {
+        lines.push(`### Bottlenecks (>1s avg)`);
+        for (const b of summary.bottlenecks) {
+          lines.push(`- **${b.tool}** by agent \`${b.agent}\`: avg ${b.avg_ms}ms`);
+        }
+        lines.push("");
+      }
+      if (summary.files_touched.length > 0) {
+        lines.push(`### Files Touched (${summary.files_touched.length})`);
+        for (const f of summary.files_touched.slice(0, 20)) {
+          lines.push(`- ${f}`);
+        }
+        if (summary.files_touched.length > 20) {
+          lines.push(`- ... and ${summary.files_touched.length - 20} more`);
+        }
+      }
+      return {
+        content: [{
+          type: "text",
+          text: lines.join("\n")
+        }]
+      };
+    } catch (error2) {
+      return {
+        content: [{
+          type: "text",
+          text: `Error generating summary: ${error2 instanceof Error ? error2.message : String(error2)}`
+        }]
+      };
+    }
+  }
+};
+var traceTools = [traceTimelineTool, traceSummaryTool];
+
 // src/mcp/standalone-server.ts
 var allTools = [
   ...lspTools,
@@ -22948,7 +23497,8 @@ var allTools = [
   pythonReplTool,
   ...stateTools,
   ...notepadTools,
-  ...memoryTools
+  ...memoryTools,
+  ...traceTools
 ];
 function zodToJsonSchema2(schema) {
   const rawShape = schema instanceof external_exports.ZodObject ? schema.shape : schema;
