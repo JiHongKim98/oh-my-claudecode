@@ -10,8 +10,6 @@
  * accessible from both codex-core.ts and gemini-core.ts.
  */
 
-import { existsSync, mkdirSync } from 'fs';
-import { resolve, dirname, isAbsolute, join } from 'path';
 
 /**
  * Output path policy types
@@ -102,54 +100,6 @@ export function getMcpConfig(): McpConfig {
  */
 export function clearMcpConfigCache(): void {
   cachedConfig = null;
-}
-
-/**
- * Redirect an output file path to the configured redirect directory.
- *
- * When outputPathPolicy is 'redirect_output', this function:
- * 1. Takes the original output_file path
- * 2. Extracts just the filename
- * 3. Places it in the configured redirect directory
- * 4. Creates the directory if it doesn't exist
- *
- * @param outputFile - The original output file path
- * @param baseDir - The base working directory for resolving relative paths
- * @returns The actual path to use (redirected or original)
- */
-export function redirectOutputPath(outputFile: string, baseDir: string = process.cwd()): string {
-  const config = getMcpConfig();
-
-  // If policy is strict, return the original path unchanged
-  if (config.outputPathPolicy === 'strict') {
-    return outputFile;
-  }
-
-  // For redirect_output policy, redirect to the configured directory
-  const redirectDir = isAbsolute(config.outputRedirectDir)
-    ? config.outputRedirectDir
-    : resolve(baseDir, config.outputRedirectDir);
-
-  // Ensure the redirect directory exists
-  if (!existsSync(redirectDir)) {
-    try {
-      mkdirSync(redirectDir, { recursive: true });
-    } catch (err) {
-      console.warn(`[MCP Config] Failed to create redirect directory '${redirectDir}': ${(err as Error).message}`);
-      // Fall back to original path if we can't create the directory
-      return outputFile;
-    }
-  }
-
-  // Extract the filename from the original path
-  const filename = outputFile.split('/').pop()?.split('\\').pop() || 'output.txt';
-
-  // Build the new path in the redirect directory
-  const redirectedPath = join(redirectDir, filename);
-
-  console.log(`[MCP Config] Redirecting output from '${outputFile}' to '${redirectedPath}'`);
-
-  return redirectedPath;
 }
 
 /**

@@ -41,20 +41,6 @@ export declare function getMcpConfig(): McpConfig;
  */
 export declare function clearMcpConfigCache(): void;
 /**
- * Redirect an output file path to the configured redirect directory.
- *
- * When outputPathPolicy is 'redirect_output', this function:
- * 1. Takes the original output_file path
- * 2. Extracts just the filename
- * 3. Places it in the configured redirect directory
- * 4. Creates the directory if it doesn't exist
- *
- * @param outputFile - The original output file path
- * @param baseDir - The base working directory for resolving relative paths
- * @returns The actual path to use (redirected or original)
- */
-export declare function redirectOutputPath(outputFile: string, baseDir?: string): string;
-/**
  * Check if external prompt access is allowed
  */
 export declare function isExternalPromptAllowed(): boolean;

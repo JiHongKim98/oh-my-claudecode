@@ -4,7 +4,7 @@
  * Pure helper functions used by both codex-core.ts and gemini-core.ts
  * to eliminate duplicated stdout truncation and output file writing logic.
  */
-import { existsSync, mkdirSync, writeFileSync, realpathSync } from 'fs';
+import { existsSync, mkdirSync, writeFileSync, realpathSync, unlinkSync } from 'fs';
 import { dirname, resolve, relative, isAbsolute, basename, join } from 'path';
 import { getMcpConfig } from './mcp-config.js';
 export const TRUNCATION_MARKER = '\n\n[OUTPUT TRUNCATED: exceeded 10MB limit]';
@@ -84,6 +84,23 @@ Suggested: use '${join(config.outputRedirectDir, basename(outputFile))}' or set 
                 mkdirSync(redirectDir, { recursive: true });
             }
             writeFileSync(safeOutputPath, content, 'utf-8');
+            // Verify written file didn't escape via symlink
+            try {
+                const writtenReal = realpathSync(safeOutputPath);
+                const relWritten = relative(baseDirReal, writtenReal);
+                if (relWritten.startsWith('..') || isAbsolute(relWritten)) {
+                    // Written file escaped boundary via symlink - remove and error
+                    try {
+                        unlinkSync(safeOutputPath);
+                    }
+                    catch { }
+                    const errorToken = E_PATH_OUTSIDE_WORKDIR_OUTPUT;
+                    const errorMessage = `${errorToken}: output file '${outputFile}' resolved to '${writtenReal}' outside working_directory '${baseDirReal}' via symlink.\nSuggested: remove the symlink and retry`;
+                    console.warn(`${logPrefix} ${errorMessage}`);
+                    return { success: false, errorToken, errorMessage };
+                }
+            }
+            catch { }
             return { success: true, actualPath: safeOutputPath };
         }
         catch (err) {
@@ -134,6 +151,23 @@ Suggested: place the output file within the working directory or set working_dir
             }
             const safePath = join(outputDirReal, basename(outputPath));
             writeFileSync(safePath, content, 'utf-8');
+            // Verify written file didn't escape via symlink
+            try {
+                const writtenReal = realpathSync(safePath);
+                const relWritten = relative(baseDirReal, writtenReal);
+                if (relWritten.startsWith('..') || isAbsolute(relWritten)) {
+                    // Written file escaped boundary via symlink - remove and error
+                    try {
+                        unlinkSync(safePath);
+                    }
+                    catch { }
+                    const errorToken = E_PATH_OUTSIDE_WORKDIR_OUTPUT;
+                    const errorMessage = `${errorToken}: output file '${outputFile}' resolved to '${writtenReal}' outside working_directory '${baseDirReal}' via symlink.\nSuggested: remove the symlink and retry`;
+                    console.warn(`${logPrefix} ${errorMessage}`);
+                    return { success: false, errorToken, errorMessage };
+                }
+            }
+            catch { }
             return { success: true, actualPath: safePath };
         }
         return { success: true, actualPath: outputPath };

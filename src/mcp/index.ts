@@ -83,7 +83,6 @@ export {
   loadMcpConfig,
   getMcpConfig,
   clearMcpConfigCache,
-  redirectOutputPath,
   isExternalPromptAllowed,
   getOutputPathPolicy,
   getOutputRedirectDir,

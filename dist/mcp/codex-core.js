@@ -13,6 +13,7 @@ import { resolve, relative, sep, isAbsolute } from 'path';
 import { createStdoutCollector, safeWriteOutputFile } from './shared-exec.js';
 import { detectCodexCli } from './cli-detection.js';
 import { getWorktreeRoot } from '../lib/worktree-paths.js';
+import { isExternalPromptAllowed } from './mcp-config.js';
 import { resolveSystemPrompt, buildPromptWithSystemContext, wrapUntrustedFileContent, isValidAgentRoleName, VALID_AGENT_ROLES } from './prompt-injection.js';
 import { persistPrompt, persistResponse, getExpectedResponsePath } from './prompt-persistence.js';
 import { writeJobStatus, getStatusFilePath, readJobStatus } from './prompt-persistence.js';
@@ -622,7 +623,7 @@ Suggested: use a working_directory within the project worktree, or set OMC_ALLOW
     const resolvedPath = resolve(baseDir, args.prompt_file);
     const cwdReal = realpathSync(baseDir);
     const relPath = relative(cwdReal, resolvedPath);
-    if (relPath === '..' || relPath.startsWith('..' + sep) || isAbsolute(relPath)) {
+    if (!isExternalPromptAllowed() && (relPath === '..' || relPath.startsWith('..' + sep) || isAbsolute(relPath))) {
         const errorToken = 'E_PATH_OUTSIDE_WORKDIR_PROMPT';
         return {
             content: [{ type: 'text', text: `${errorToken}: prompt_file '${args.prompt_file}' resolves outside working_directory '${baseDirReal}'.
@@ -651,7 +652,7 @@ Suggested: ensure the prompt file exists and is accessible` }],
         };
     }
     const relReal = relative(cwdReal, resolvedReal);
-    if (relReal === '..' || relReal.startsWith('..' + sep) || isAbsolute(relReal)) {
+    if (!isExternalPromptAllowed() && (relReal === '..' || relReal.startsWith('..' + sep) || isAbsolute(relReal))) {
         const errorToken = 'E_PATH_OUTSIDE_WORKDIR_PROMPT';
         return {
             content: [{ type: 'text', text: `${errorToken}: prompt_file '${args.prompt_file}' resolves to a path outside working_directory '${baseDirReal}'.

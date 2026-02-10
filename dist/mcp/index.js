@@ -17,5 +17,5 @@ getStatusFilePath, writeJobStatus, readJobStatus, checkResponseReady, readComple
 // Job management tools for background execution
 export { handleWaitForJob, handleCheckJobStatus, handleKillJob, handleListJobs, findJobStatusFile, getJobManagementToolSchemas } from './job-management.js';
 // MCP Configuration module
-export { loadMcpConfig, getMcpConfig, clearMcpConfigCache, redirectOutputPath, isExternalPromptAllowed, getOutputPathPolicy, getOutputRedirectDir, DEFAULT_MCP_CONFIG } from './mcp-config.js';
+export { loadMcpConfig, getMcpConfig, clearMcpConfigCache, isExternalPromptAllowed, getOutputPathPolicy, getOutputRedirectDir, DEFAULT_MCP_CONFIG } from './mcp-config.js';
 //# sourceMappingURL=index.js.map
