@@ -18,7 +18,7 @@ import { dirname, resolve, relative, sep, isAbsolute, basename, join } from 'pat
 import { createStdoutCollector, safeWriteOutputFile } from './shared-exec.js';
 import { detectGeminiCli } from './cli-detection.js';
 import { getWorktreeRoot } from '../lib/worktree-paths.js';
-import { resolveSystemPrompt, buildPromptWithSystemContext, wrapUntrustedFileContent, VALID_AGENT_ROLES } from './prompt-injection.js';
+import { resolveSystemPrompt, buildPromptWithSystemContext, wrapUntrustedFileContent, isValidAgentRoleName, VALID_AGENT_ROLES } from './prompt-injection.js';
 import { persistPrompt, persistResponse, getExpectedResponsePath } from './prompt-persistence.js';
 import { writeJobStatus, getStatusFilePath, readJobStatus } from './prompt-persistence.js';
 import type { JobStatus, BackgroundJobMeta } from './prompt-persistence.js';
@@ -477,7 +477,7 @@ export async function handleAskGemini(args: {
   }
 
 
-  // Validate agent_role against the shared allowed agents list
+  // Validate agent_role - must be non-empty and pass character validation
   if (!agent_role || !agent_role.trim()) {
     return {
       content: [{
@@ -487,11 +487,21 @@ export async function handleAskGemini(args: {
       isError: true
     };
   }
-  if (!(VALID_AGENT_ROLES as readonly string[]).includes(agent_role)) {
+  if (!isValidAgentRoleName(agent_role)) {
     return {
       content: [{
         type: 'text' as const,
-        text: `Invalid agent_role: "${agent_role}". Must be one of: ${VALID_AGENT_ROLES.join(', ')}. Recommended for Gemini: ${GEMINI_RECOMMENDED_ROLES.join(', ')}`
+        text: `Invalid agent_role: "${agent_role}". Role names must contain only lowercase letters, numbers, and hyphens. Recommended for Gemini: ${GEMINI_RECOMMENDED_ROLES.join(', ')}`
+      }],
+      isError: true
+    };
+  }
+  // Validate agent_role exists in discovered roles (allowlist enforcement)
+  if (!VALID_AGENT_ROLES.includes(agent_role)) {
+    return {
+      content: [{
+        type: 'text' as const,
+        text: `Unknown agent_role: "${agent_role}". Available roles: ${VALID_AGENT_ROLES.join(', ')}. Recommended for Gemini: ${GEMINI_RECOMMENDED_ROLES.join(', ')}`
       }],
       isError: true
     };

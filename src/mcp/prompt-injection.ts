@@ -5,31 +5,71 @@
  * Enables agents to pass their personality/guidelines when consulting external models.
  */
 
+import { readdirSync } from 'fs';
+import { join, dirname, basename } from 'path';
+import { fileURLToPath } from 'url';
 import { loadAgentPrompt } from '../agents/utils.js';
 
 /**
- * Valid agent roles that can be used with agent_role parameter.
- * Matches the agent prompt files in agents/*.md
+ * Get the package root directory
  */
-export const VALID_AGENT_ROLES = [
-  'architect', 'architect-medium', 'architect-low',
-  'analyst', 'critic', 'planner',
-  'executor', 'executor-high', 'executor-low',
-  'deep-executor',
-  'designer', 'designer-low', 'designer-high',
-  'explore', 'explore-high',
-  'researcher',
-  'writer', 'vision',
-  'qa-tester',
-  'scientist', 'scientist-high',
-  'security-reviewer', 'security-reviewer-low',
-  'build-fixer',
-  'tdd-guide', 'tdd-guide-low',
-  'code-reviewer',
-  'git-master',
-] as const;
+function getPackageDir(): string {
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = dirname(__filename);
+  // From src/mcp/ go up to package root
+  return join(__dirname, '..', '..');
+}
 
-export type AgentRole = typeof VALID_AGENT_ROLES[number];
+/**
+ * Agent role name validation regex.
+ * Allows only lowercase letters, numbers, and hyphens.
+ * This is the security check - the actual role existence is handled by loadAgentPrompt.
+ */
+const AGENT_ROLE_NAME_REGEX = /^[a-z0-9-]+$/;
+
+/**
+ * Check if a role name is valid (contains only allowed characters).
+ * This is a security check, not an allowlist check.
+ */
+export function isValidAgentRoleName(name: string): boolean {
+  return AGENT_ROLE_NAME_REGEX.test(name);
+}
+
+/**
+ * Discover valid agent roles by scanning agents/*.md files.
+ * Cached after first call — agent files don't change at runtime.
+ */
+let _cachedRoles: string[] | null = null;
+
+export function getValidAgentRoles(): string[] {
+  if (_cachedRoles) return _cachedRoles;
+
+  try {
+    const agentsDir = join(getPackageDir(), 'agents');
+    const files = readdirSync(agentsDir);
+    _cachedRoles = files
+      .filter(f => f.endsWith('.md'))
+      .map(f => basename(f, '.md'))
+      .sort();
+  } catch (err) {
+    // Fail closed: elevated error logging so startup issues are visible
+    console.error('[prompt-injection] CRITICAL: Could not scan agents/ directory for role discovery:', err);
+    _cachedRoles = [];
+  }
+
+  return _cachedRoles;
+}
+
+/**
+ * Valid agent roles discovered dynamically from agents/*.md files.
+ * This is computed at module load time for backward compatibility.
+ */
+export const VALID_AGENT_ROLES: readonly string[] = getValidAgentRoles();
+
+/**
+ * AgentRole type - now string since roles are dynamic.
+ */
+export type AgentRole = string;
 
 /**
  * Resolve the system prompt from either explicit system_prompt or agent_role.
