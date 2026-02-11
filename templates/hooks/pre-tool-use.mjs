@@ -6,13 +6,13 @@
 
 import * as path from 'path';
 import { dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // Dynamic import for the shared stdin module
-const { readStdin } = await import(path.join(__dirname, 'lib', 'stdin.mjs'));
+const { readStdin } = await import(pathToFileURL(path.join(__dirname, 'lib', 'stdin.mjs')).href);
 
 // Allowed path patterns (no warning)
 // Paths are normalized to forward slashes before matching
