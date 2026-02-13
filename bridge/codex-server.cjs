@@ -16684,6 +16684,7 @@ var RATE_LIMIT_RETRY_COUNT = Math.min(10, Math.max(1, parseInt(process.env.OMC_C
 var RATE_LIMIT_INITIAL_DELAY = Math.max(1e3, parseInt(process.env.OMC_CODEX_RATE_LIMIT_INITIAL_DELAY || "5000", 10) || 5e3);
 var RATE_LIMIT_MAX_DELAY = Math.max(5e3, parseInt(process.env.OMC_CODEX_RATE_LIMIT_MAX_DELAY || "60000", 10) || 6e4);
 var CODEX_RECOMMENDED_ROLES = ["architect", "planner", "critic", "analyst", "code-reviewer", "security-reviewer", "tdd-guide"];
+var VALID_REASONING_EFFORTS = ["minimal", "low", "medium", "high", "xhigh"];
 var MAX_FILE_SIZE = 5 * 1024 * 1024;
 var MAX_STDOUT_BYTES = 10 * 1024 * 1024;
 function computeBackoffDelay(attempt, initialDelay = RATE_LIMIT_INITIAL_DELAY, maxDelay = RATE_LIMIT_MAX_DELAY) {
@@ -16775,11 +16776,14 @@ function parseCodexOutput(output) {
   }
   return messages.join("\n") || output;
 }
-function executeCodex(prompt, model, cwd) {
+function executeCodex(prompt, model, cwd, reasoningEffort) {
   return new Promise((resolve7, reject) => {
     validateModelName(model);
     let settled = false;
     const args = ["exec", "-m", model, "--json", "--full-auto"];
+    if (reasoningEffort && VALID_REASONING_EFFORTS.includes(reasoningEffort)) {
+      args.push("-c", `model_reasoning_effort="${reasoningEffort}"`);
+    }
     const child = (0, import_child_process3.spawn)("codex", args, {
       stdio: ["pipe", "pipe", "pipe"],
       ...cwd ? { cwd } : {},
@@ -16844,7 +16848,7 @@ function executeCodex(prompt, model, cwd) {
     child.stdin.end();
   });
 }
-async function executeCodexWithFallback(prompt, model, cwd, fallbackChain, overrides) {
+async function executeCodexWithFallback(prompt, model, cwd, fallbackChain, overrides, reasoningEffort) {
   const exec = overrides?.executor ?? executeCodex;
   const sleepFn = overrides?.sleepFn ?? sleep;
   const modelExplicit = model !== void 0 && model !== null && model !== "";
@@ -16853,7 +16857,7 @@ async function executeCodexWithFallback(prompt, model, cwd, fallbackChain, overr
     let lastError2 = null;
     for (let attempt = 0; attempt <= RATE_LIMIT_RETRY_COUNT; attempt++) {
       try {
-        const response = await exec(prompt, effectiveModel, cwd);
+        const response = await exec(prompt, effectiveModel, cwd, reasoningEffort);
         return { response, usedFallback: false, actualModel: effectiveModel };
       } catch (err) {
         lastError2 = err;
@@ -16874,7 +16878,7 @@ async function executeCodexWithFallback(prompt, model, cwd, fallbackChain, overr
   let rateLimitAttempt = 0;
   for (const tryModel of modelsToTry) {
     try {
-      const response = await exec(prompt, tryModel, cwd);
+      const response = await exec(prompt, tryModel, cwd, reasoningEffort);
       return {
         response,
         usedFallback: tryModel !== effectiveModel,
@@ -16894,7 +16898,7 @@ async function executeCodexWithFallback(prompt, model, cwd, fallbackChain, overr
   }
   throw lastError || new Error("All Codex models in fallback chain failed");
 }
-function executeCodexBackground(fullPrompt, modelInput, jobMeta, workingDirectory) {
+function executeCodexBackground(fullPrompt, modelInput, jobMeta, workingDirectory, reasoningEffort) {
   try {
     const modelExplicit = modelInput !== void 0 && modelInput !== null && modelInput !== "";
     const effectiveModel = modelInput || CODEX_DEFAULT_MODEL;
@@ -16902,6 +16906,9 @@ function executeCodexBackground(fullPrompt, modelInput, jobMeta, workingDirector
     const trySpawnWithModel = (tryModel, remainingModels, rateLimitAttempt = 0) => {
       validateModelName(tryModel);
       const args = ["exec", "-m", tryModel, "--json", "--full-auto"];
+      if (reasoningEffort && VALID_REASONING_EFFORTS.includes(reasoningEffort)) {
+        args.push("-c", `model_reasoning_effort="${reasoningEffort}"`);
+      }
       const child = (0, import_child_process3.spawn)("codex", args, {
         detached: process.platform !== "win32",
         stdio: ["pipe", "pipe", "pipe"],
@@ -17165,6 +17172,7 @@ async function handleAskCodex(args) {
     return singleErrorBlock("Invalid request: args must be an object.");
   }
   const { agent_role, context_files } = args;
+  const resolvedEffort = typeof args.reasoning_effort === "string" && VALID_REASONING_EFFORTS.includes(args.reasoning_effort) ? args.reasoning_effort : void 0;
   const config2 = loadConfig();
   const resolved = resolveExternalModel(config2.externalModels, {
     agentRole: args.agent_role,
@@ -17349,7 +17357,7 @@ ${detection.installHint}`);
       // This is the effective model for metadata
       promptFile: promptResult.filePath,
       responseFile: expectedResponsePath
-    }, baseDir);
+    }, baseDir, resolvedEffort);
     if ("error" in result) {
       return singleErrorBlock(`Failed to spawn background job: ${result.error}`);
     }
@@ -17373,6 +17381,7 @@ ${detection.installHint}`);
   }
   const paramLines = [
     `**Agent Role:** ${agent_role}`,
+    resolvedEffort ? `**Reasoning Effort:** ${resolvedEffort}` : null,
     context_files?.length ? `**Files:** ${context_files.join(", ")}` : null,
     promptResult ? `**Prompt File:** ${promptResult.filePath}` : null,
     expectedResponsePath ? `**Response File:** ${expectedResponsePath}` : null,
@@ -17380,7 +17389,7 @@ ${detection.installHint}`);
     `**Path Policy:** ${pathPolicy}`
   ].filter(Boolean).join("\n");
   try {
-    const { response, usedFallback, actualModel } = await executeCodexWithFallback(fullPrompt, args.model, baseDir, fallbackChain);
+    const { response, usedFallback, actualModel } = await executeCodexWithFallback(fullPrompt, args.model, baseDir, fallbackChain, void 0, resolvedEffort);
     if (promptResult) {
       persistResponse({
         provider: "codex",
@@ -18007,6 +18016,7 @@ var askCodexTool = {
       output_file: { type: "string", description: "Required for file-based mode (prompt_file). Auto-generated in inline mode (prompt). Response content is returned inline only when using prompt parameter." },
       context_files: { type: "array", items: { type: "string" }, description: "File paths to include as context (contents will be prepended to prompt)" },
       model: { type: "string", description: `Codex model to use (default: ${CODEX_DEFAULT_MODEL}). Set OMC_CODEX_DEFAULT_MODEL env var to change default.` },
+      reasoning_effort: { type: "string", description: "Codex reasoning effort level: 'minimal', 'low', 'medium' (Codex CLI default), 'high', or 'xhigh' (model-dependent). Maps to Codex CLI -c model_reasoning_effort. If omitted, uses Codex CLI default from ~/.codex/config.toml." },
       background: { type: "boolean", description: "Run in background (non-blocking). Returns immediately with job metadata and file paths. Check response file for completion. Not available with inline prompt." },
       working_directory: { type: "string", description: "Working directory for path resolution and CLI execution. Defaults to process.cwd()." }
     },
@@ -18024,8 +18034,8 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
   if (name === "ask_codex") {
-    const { prompt, prompt_file, output_file, agent_role, model, context_files, background, working_directory } = args ?? {};
-    return handleAskCodex({ prompt, prompt_file, output_file, agent_role, model, context_files, background, working_directory });
+    const { prompt, prompt_file, output_file, agent_role, model, reasoning_effort, context_files, background, working_directory } = args ?? {};
+    return handleAskCodex({ prompt, prompt_file, output_file, agent_role, model, reasoning_effort, context_files, background, working_directory });
   }
   if (name === "wait_for_job") {
     const { job_id, timeout_ms } = args ?? {};

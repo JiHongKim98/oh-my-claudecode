@@ -61,6 +61,11 @@ export { CODEX_MODEL_FALLBACKS };
 // Codex is best for analytical/planning tasks (recommended, not enforced)
 export const CODEX_RECOMMENDED_ROLES = ['architect', 'planner', 'critic', 'analyst', 'code-reviewer', 'security-reviewer', 'tdd-guide'] as const;
 
+// Valid reasoning effort levels for Codex CLI (via -c model_reasoning_effort=<value>)
+// Default (when omitted): inherits from ~/.codex/config.toml (Codex CLI default is "medium")
+export const VALID_REASONING_EFFORTS = ['minimal', 'low', 'medium', 'high', 'xhigh'] as const;
+export type ReasoningEffort = typeof VALID_REASONING_EFFORTS[number];
+
 export const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB per file
 export const MAX_STDOUT_BYTES = 10 * 1024 * 1024; // 10MB stdout cap
 
@@ -205,11 +210,15 @@ export function parseCodexOutput(output: string): string {
 /**
  * Execute Codex CLI command and return the response
  */
-export function executeCodex(prompt: string, model: string, cwd?: string): Promise<string> {
+export function executeCodex(prompt: string, model: string, cwd?: string, reasoningEffort?: ReasoningEffort): Promise<string> {
   return new Promise((resolve, reject) => {
     validateModelName(model);
     let settled = false;
     const args = ['exec', '-m', model, '--json', '--full-auto'];
+    // Per-call reasoning effort override via Codex CLI -c flag
+    if (reasoningEffort && VALID_REASONING_EFFORTS.includes(reasoningEffort)) {
+      args.push('-c', `model_reasoning_effort="${reasoningEffort}"`);
+    }
     const child = spawn('codex', args, {
       stdio: ['pipe', 'pipe', 'pipe'],
       ...(cwd ? { cwd } : {}),
@@ -297,6 +306,7 @@ export async function executeCodexWithFallback(
   fallbackChain?: string[],
   /** @internal Testing overrides */
   overrides?: { executor?: typeof executeCodex; sleepFn?: typeof sleep },
+  reasoningEffort?: ReasoningEffort,
 ): Promise<{ response: string; usedFallback: boolean; actualModel: string }> {
   const exec = overrides?.executor ?? executeCodex;
   const sleepFn = overrides?.sleepFn ?? sleep;
@@ -308,7 +318,7 @@ export async function executeCodexWithFallback(
     let lastError: Error | null = null;
     for (let attempt = 0; attempt <= RATE_LIMIT_RETRY_COUNT; attempt++) {
       try {
-        const response = await exec(prompt, effectiveModel, cwd);
+        const response = await exec(prompt, effectiveModel, cwd, reasoningEffort);
         return { response, usedFallback: false, actualModel: effectiveModel };
       } catch (err) {
         lastError = err as Error;
@@ -334,7 +344,7 @@ export async function executeCodexWithFallback(
   let rateLimitAttempt = 0;
   for (const tryModel of modelsToTry) {
     try {
-      const response = await exec(prompt, tryModel, cwd);
+      const response = await exec(prompt, tryModel, cwd, reasoningEffort);
       return {
         response,
         usedFallback: tryModel !== effectiveModel,
@@ -366,7 +376,8 @@ export function executeCodexBackground(
   fullPrompt: string,
   modelInput: string | undefined,
   jobMeta: BackgroundJobMeta,
-  workingDirectory?: string
+  workingDirectory?: string,
+  reasoningEffort?: ReasoningEffort,
 ): { pid: number } | { error: string } {
   try {
     const modelExplicit = modelInput !== undefined && modelInput !== null && modelInput !== '';
@@ -383,6 +394,10 @@ export function executeCodexBackground(
     const trySpawnWithModel = (tryModel: string, remainingModels: string[], rateLimitAttempt: number = 0): { pid: number } | { error: string } => {
       validateModelName(tryModel);
       const args = ['exec', '-m', tryModel, '--json', '--full-auto'];
+      // Per-call reasoning effort override for background execution
+      if (reasoningEffort && VALID_REASONING_EFFORTS.includes(reasoningEffort)) {
+        args.push('-c', `model_reasoning_effort="${reasoningEffort}"`);
+      }
       const child = spawn('codex', args, {
         detached: process.platform !== 'win32',
         stdio: ['pipe', 'pipe', 'pipe'],
@@ -694,6 +709,7 @@ export async function handleAskCodex(args: {
   output_file?: string;
   agent_role: string;
   model?: string;
+  reasoning_effort?: string;
   context_files?: string[];
   background?: boolean;
   working_directory?: string;
@@ -703,6 +719,12 @@ export async function handleAskCodex(args: {
   }
 
   const { agent_role, context_files } = args;
+
+  // Resolve reasoning effort: explicit parameter takes precedence, otherwise omit (use CLI default)
+  const resolvedEffort: ReasoningEffort | undefined =
+    typeof args.reasoning_effort === 'string' && VALID_REASONING_EFFORTS.includes(args.reasoning_effort as ReasoningEffort)
+      ? (args.reasoning_effort as ReasoningEffort)
+      : undefined;
 
   // Resolve model based on configuration and agent role
   const config = loadConfig();
@@ -946,7 +968,7 @@ ${resolvedPrompt}`;
       model: model, // This is the effective model for metadata
       promptFile: promptResult.filePath,
       responseFile: expectedResponsePath!,
-    }, baseDir);
+    }, baseDir, resolvedEffort);
 
     if ('error' in result) {
       return singleErrorBlock(`Failed to spawn background job: ${result.error}`);
@@ -974,6 +996,7 @@ ${resolvedPrompt}`;
   // Build parameter visibility block
   const paramLines = [
     `**Agent Role:** ${agent_role}`,
+    resolvedEffort ? `**Reasoning Effort:** ${resolvedEffort}` : null,
     context_files?.length ? `**Files:** ${context_files.join(', ')}` : null,
     promptResult ? `**Prompt File:** ${promptResult.filePath}` : null,
     expectedResponsePath ? `**Response File:** ${expectedResponsePath}` : null,
@@ -982,7 +1005,7 @@ ${resolvedPrompt}`;
   ].filter(Boolean).join('\n');
 
   try {
-    const { response, usedFallback, actualModel } = await executeCodexWithFallback(fullPrompt, args.model as string | undefined, baseDir, fallbackChain);
+    const { response, usedFallback, actualModel } = await executeCodexWithFallback(fullPrompt, args.model as string | undefined, baseDir, fallbackChain, undefined, resolvedEffort);
 
     // Persist response to disk (audit trail)
     if (promptResult) {

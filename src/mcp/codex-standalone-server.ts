@@ -39,6 +39,7 @@ const askCodexTool = {
       output_file: { type: 'string', description: 'Required for file-based mode (prompt_file). Auto-generated in inline mode (prompt). Response content is returned inline only when using prompt parameter.' },
       context_files: { type: 'array', items: { type: 'string' }, description: 'File paths to include as context (contents will be prepended to prompt)' },
       model: { type: 'string', description: `Codex model to use (default: ${CODEX_DEFAULT_MODEL}). Set OMC_CODEX_DEFAULT_MODEL env var to change default.` },
+      reasoning_effort: { type: 'string', description: "Codex reasoning effort level: 'minimal', 'low', 'medium' (Codex CLI default), 'high', or 'xhigh' (model-dependent). Maps to Codex CLI -c model_reasoning_effort. If omitted, uses Codex CLI default from ~/.codex/config.toml." },
       background: { type: 'boolean', description: 'Run in background (non-blocking). Returns immediately with job metadata and file paths. Check response file for completion. Not available with inline prompt.' },
       working_directory: { type: 'string', description: 'Working directory for path resolution and CLI execution. Defaults to process.cwd().' },
     },
@@ -60,17 +61,18 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
   if (name === 'ask_codex') {
-    const { prompt, prompt_file, output_file, agent_role, model, context_files, background, working_directory } = (args ?? {}) as {
+    const { prompt, prompt_file, output_file, agent_role, model, reasoning_effort, context_files, background, working_directory } = (args ?? {}) as {
       prompt?: string;
       prompt_file?: string;
       output_file?: string;
       agent_role: string;
       model?: string;
+      reasoning_effort?: string;
       context_files?: string[];
       background?: boolean;
       working_directory?: string;
     };
-    return handleAskCodex({ prompt, prompt_file, output_file, agent_role, model, context_files, background, working_directory });
+    return handleAskCodex({ prompt, prompt_file, output_file, agent_role, model, reasoning_effort, context_files, background, working_directory });
   }
   if (name === 'wait_for_job') {
     const { job_id, timeout_ms } = (args ?? {}) as { job_id: string; timeout_ms?: number };

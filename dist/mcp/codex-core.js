@@ -45,6 +45,9 @@ export const RATE_LIMIT_MAX_DELAY = Math.max(5000, parseInt(process.env.OMC_CODE
 export { CODEX_MODEL_FALLBACKS };
 // Codex is best for analytical/planning tasks (recommended, not enforced)
 export const CODEX_RECOMMENDED_ROLES = ['architect', 'planner', 'critic', 'analyst', 'code-reviewer', 'security-reviewer', 'tdd-guide'];
+// Valid reasoning effort levels for Codex CLI (via -c model_reasoning_effort=<value>)
+// Default (when omitted): inherits from ~/.codex/config.toml (Codex CLI default is "medium")
+export const VALID_REASONING_EFFORTS = ['minimal', 'low', 'medium', 'high', 'xhigh'];
 export const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB per file
 export const MAX_STDOUT_BYTES = 10 * 1024 * 1024; // 10MB stdout cap
 /**
@@ -177,11 +180,15 @@ export function parseCodexOutput(output) {
 /**
  * Execute Codex CLI command and return the response
  */
-export function executeCodex(prompt, model, cwd) {
+export function executeCodex(prompt, model, cwd, reasoningEffort) {
     return new Promise((resolve, reject) => {
         validateModelName(model);
         let settled = false;
         const args = ['exec', '-m', model, '--json', '--full-auto'];
+        // Per-call reasoning effort override via Codex CLI -c flag
+        if (reasoningEffort && VALID_REASONING_EFFORTS.includes(reasoningEffort)) {
+            args.push('-c', `model_reasoning_effort="${reasoningEffort}"`);
+        }
         const child = spawn('codex', args, {
             stdio: ['pipe', 'pipe', 'pipe'],
             ...(cwd ? { cwd } : {}),
@@ -259,7 +266,7 @@ export function executeCodex(prompt, model, cwd) {
  */
 export async function executeCodexWithFallback(prompt, model, cwd, fallbackChain, 
 /** @internal Testing overrides */
-overrides) {
+overrides, reasoningEffort) {
     const exec = overrides?.executor ?? executeCodex;
     const sleepFn = overrides?.sleepFn ?? sleep;
     const modelExplicit = model !== undefined && model !== null && model !== '';
@@ -269,7 +276,7 @@ overrides) {
         let lastError = null;
         for (let attempt = 0; attempt <= RATE_LIMIT_RETRY_COUNT; attempt++) {
             try {
-                const response = await exec(prompt, effectiveModel, cwd);
+                const response = await exec(prompt, effectiveModel, cwd, reasoningEffort);
                 return { response, usedFallback: false, actualModel: effectiveModel };
             }
             catch (err) {
@@ -294,7 +301,7 @@ overrides) {
     let rateLimitAttempt = 0;
     for (const tryModel of modelsToTry) {
         try {
-            const response = await exec(prompt, tryModel, cwd);
+            const response = await exec(prompt, tryModel, cwd, reasoningEffort);
             return {
                 response,
                 usedFallback: tryModel !== effectiveModel,
@@ -321,7 +328,7 @@ overrides) {
 /**
  * Execute Codex CLI in background with fallback chain, writing status and response files upon completion
  */
-export function executeCodexBackground(fullPrompt, modelInput, jobMeta, workingDirectory) {
+export function executeCodexBackground(fullPrompt, modelInput, jobMeta, workingDirectory, reasoningEffort) {
     try {
         const modelExplicit = modelInput !== undefined && modelInput !== null && modelInput !== '';
         const effectiveModel = modelInput || CODEX_DEFAULT_MODEL;
@@ -335,6 +342,10 @@ export function executeCodexBackground(fullPrompt, modelInput, jobMeta, workingD
         const trySpawnWithModel = (tryModel, remainingModels, rateLimitAttempt = 0) => {
             validateModelName(tryModel);
             const args = ['exec', '-m', tryModel, '--json', '--full-auto'];
+            // Per-call reasoning effort override for background execution
+            if (reasoningEffort && VALID_REASONING_EFFORTS.includes(reasoningEffort)) {
+                args.push('-c', `model_reasoning_effort="${reasoningEffort}"`);
+            }
             const child = spawn('codex', args, {
                 detached: process.platform !== 'win32',
                 stdio: ['pipe', 'pipe', 'pipe'],
@@ -631,6 +642,10 @@ export async function handleAskCodex(args) {
         return singleErrorBlock('Invalid request: args must be an object.');
     }
     const { agent_role, context_files } = args;
+    // Resolve reasoning effort: explicit parameter takes precedence, otherwise omit (use CLI default)
+    const resolvedEffort = typeof args.reasoning_effort === 'string' && VALID_REASONING_EFFORTS.includes(args.reasoning_effort)
+        ? args.reasoning_effort
+        : undefined;
     // Resolve model based on configuration and agent role
     const config = loadConfig();
     const resolved = resolveExternalModel(config.externalModels, {
@@ -853,7 +868,7 @@ ${resolvedPrompt}`;
             model: model, // This is the effective model for metadata
             promptFile: promptResult.filePath,
             responseFile: expectedResponsePath,
-        }, baseDir);
+        }, baseDir, resolvedEffort);
         if ('error' in result) {
             return singleErrorBlock(`Failed to spawn background job: ${result.error}`);
         }
@@ -878,6 +893,7 @@ ${resolvedPrompt}`;
     // Build parameter visibility block
     const paramLines = [
         `**Agent Role:** ${agent_role}`,
+        resolvedEffort ? `**Reasoning Effort:** ${resolvedEffort}` : null,
         context_files?.length ? `**Files:** ${context_files.join(', ')}` : null,
         promptResult ? `**Prompt File:** ${promptResult.filePath}` : null,
         expectedResponsePath ? `**Response File:** ${expectedResponsePath}` : null,
@@ -885,7 +901,7 @@ ${resolvedPrompt}`;
         `**Path Policy:** ${pathPolicy}`,
     ].filter(Boolean).join('\n');
     try {
-        const { response, usedFallback, actualModel } = await executeCodexWithFallback(fullPrompt, args.model, baseDir, fallbackChain);
+        const { response, usedFallback, actualModel } = await executeCodexWithFallback(fullPrompt, args.model, baseDir, fallbackChain, undefined, resolvedEffort);
         // Persist response to disk (audit trail)
         if (promptResult) {
             persistResponse({

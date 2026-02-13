@@ -18,6 +18,8 @@ export declare const RATE_LIMIT_INITIAL_DELAY: number;
 export declare const RATE_LIMIT_MAX_DELAY: number;
 export { CODEX_MODEL_FALLBACKS };
 export declare const CODEX_RECOMMENDED_ROLES: readonly ["architect", "planner", "critic", "analyst", "code-reviewer", "security-reviewer", "tdd-guide"];
+export declare const VALID_REASONING_EFFORTS: readonly ["minimal", "low", "medium", "high", "xhigh"];
+export type ReasoningEffort = typeof VALID_REASONING_EFFORTS[number];
 export declare const MAX_FILE_SIZE: number;
 export declare const MAX_STDOUT_BYTES: number;
 /**
@@ -67,7 +69,7 @@ export declare function parseCodexOutput(output: string): string;
 /**
  * Execute Codex CLI command and return the response
  */
-export declare function executeCodex(prompt: string, model: string, cwd?: string): Promise<string>;
+export declare function executeCodex(prompt: string, model: string, cwd?: string, reasoningEffort?: ReasoningEffort): Promise<string>;
 /**
  * Execute Codex CLI with model fallback chain and exponential backoff on rate limits.
  * Falls back on model_not_found or rate limit errors when model was not explicitly provided.
@@ -78,7 +80,7 @@ export declare function executeCodexWithFallback(prompt: string, model: string |
 overrides?: {
     executor?: typeof executeCodex;
     sleepFn?: typeof sleep;
-}): Promise<{
+}, reasoningEffort?: ReasoningEffort): Promise<{
     response: string;
     usedFallback: boolean;
     actualModel: string;
@@ -86,7 +88,7 @@ overrides?: {
 /**
  * Execute Codex CLI in background with fallback chain, writing status and response files upon completion
  */
-export declare function executeCodexBackground(fullPrompt: string, modelInput: string | undefined, jobMeta: BackgroundJobMeta, workingDirectory?: string): {
+export declare function executeCodexBackground(fullPrompt: string, modelInput: string | undefined, jobMeta: BackgroundJobMeta, workingDirectory?: string, reasoningEffort?: ReasoningEffort): {
     pid: number;
 } | {
     error: string;
@@ -107,6 +109,7 @@ export declare function handleAskCodex(args: {
     output_file?: string;
     agent_role: string;
     model?: string;
+    reasoning_effort?: string;
     context_files?: string[];
     background?: boolean;
     working_directory?: string;

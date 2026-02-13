@@ -18,11 +18,12 @@ const askCodexTool = tool("ask_codex", `Send a prompt to OpenAI Codex CLI for an
     output_file: { type: "string", description: "Required for file-based mode (prompt_file). Auto-generated in inline mode (prompt). Response content is returned inline only when using prompt parameter." },
     context_files: { type: "array", items: { type: "string" }, description: "File paths to include as context (contents will be prepended to prompt)" },
     model: { type: "string", description: `Codex model to use (default: ${CODEX_DEFAULT_MODEL}). Set OMC_CODEX_DEFAULT_MODEL env var to change default.` },
+    reasoning_effort: { type: "string", description: "Codex reasoning effort level: 'minimal', 'low', 'medium' (Codex CLI default), 'high', or 'xhigh' (model-dependent). Maps to Codex CLI -c model_reasoning_effort. If omitted, uses Codex CLI default from ~/.codex/config.toml." },
     background: { type: "boolean", description: "Run in background (non-blocking). Returns immediately with job metadata and file paths. Check response file for completion. Not available with inline prompt." },
     working_directory: { type: "string", description: "Working directory for path resolution and CLI execution. Defaults to process.cwd()." },
 }, async (args) => {
-    const { prompt, prompt_file, output_file, agent_role, model, context_files, background, working_directory } = args;
-    return handleAskCodex({ prompt, prompt_file, output_file, agent_role, model, context_files, background, working_directory });
+    const { prompt, prompt_file, output_file, agent_role, model, reasoning_effort, context_files, background, working_directory } = args;
+    return handleAskCodex({ prompt, prompt_file, output_file, agent_role, model, reasoning_effort, context_files, background, working_directory });
 });
 const waitForJobTool = tool("wait_for_job", "Block (poll) until a background job reaches a terminal state (completed, failed, or timeout). Uses exponential backoff. Returns the response preview on success.", {
     job_id: { type: "string", description: "The job ID returned when the background job was dispatched." },
