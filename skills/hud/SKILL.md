@@ -193,13 +193,13 @@ Shows only the essentials:
 ### Focused (Default)
 Shows all relevant elements:
 ```
-[OMC] ralph:3/10 | US-002 | ultrawork skill:planner | ctx:67% | agents:2 | bg:3/5 | todos:2/5
+[OMC] branch:main | ralph:3/10 | US-002 | ultrawork skill:planner | ctx:67% | agents:2 | bg:3/5 | todos:2/5
 ```
 
 ### Full
 Shows everything including multi-line agent details:
 ```
-[OMC] ralph:3/10 | US-002 (2/5) | ultrawork | ctx:[████░░]67% | agents:3 | bg:3/5 | todos:2/5
+[OMC] repo:oh-my-claudecode branch:main | ralph:3/10 | US-002 (2/5) | ultrawork | ctx:[████░░]67% | agents:3 | bg:3/5 | todos:2/5
 ├─ O architect    2m   analyzing architecture patterns...
 ├─ e explore     45s   searching for test files
 └─ s executor     1m   implementing validation logic
@@ -218,6 +218,8 @@ When agents are running, the HUD shows detailed information on separate lines:
 | Element | Description |
 |---------|-------------|
 | `[OMC]` | Mode identifier |
+| `repo:name` | Git repository name (cyan) |
+| `branch:name` | Git branch name (cyan) |
 | `ralph:3/10` | Ralph loop iteration/max |
 | `US-002` | Current PRD story ID |
 | `ultrawork` | Active mode badge |
