@@ -302,6 +302,8 @@ describe('Agents Element', () => {
       { type: 'quality-strategist', model: 'opus', expected: 'Qs' },
       { type: 'product-manager', model: 'opus', expected: 'Pm' },
       { type: 'information-architect', model: 'opus', expected: 'Ia' },
+      // Domain Specialists
+      { type: 'document-specialist', model: 'sonnet', expected: 'd' },
       // Backward Compatibility
       { type: 'researcher', model: 'sonnet', expected: 'r' },
     ];
@@ -412,7 +414,7 @@ describe('Agents Element', () => {
         createAgent('oh-my-claudecode:architect', 'opus'),
         createAgent('oh-my-claudecode:explore', 'haiku'),
         createAgent('oh-my-claudecode:executor', 'sonnet'),
-        createAgent('oh-my-claudecode:researcher', 'haiku'),
+        createAgent('oh-my-claudecode:document-specialist', 'haiku'),
       ];
       const result = renderAgentsMultiLine(agents, 2);
       // 2 agents + 1 overflow indicator

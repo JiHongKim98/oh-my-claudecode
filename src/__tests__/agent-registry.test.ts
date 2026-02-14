@@ -36,7 +36,7 @@ describe('Agent Registry Validation', () => {
   });
 
   test('no hardcoded prompts in base agent .ts files', () => {
-    const baseAgents = ['architect', 'executor', 'explore', 'designer', 'researcher',
+    const baseAgents = ['architect', 'executor', 'explore', 'designer', 'document-specialist',
                         'writer', 'vision', 'planner', 'critic', 'analyst', 'scientist', 'qa-tester'];
     const agentsDir = path.join(__dirname, '../agents');
     for (const name of baseAgents) {

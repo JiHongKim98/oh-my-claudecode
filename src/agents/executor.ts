@@ -28,7 +28,7 @@ export const SISYPHUS_JUNIOR_PROMPT_METADATA: AgentPromptMetadata = {
   ],
   avoidWhen: [
     'Multi-file refactoring (use orchestrator)',
-    'Tasks requiring research (use explore/researcher first)',
+    'Tasks requiring research (use explore/document-specialist first)',
     'Complex decisions (consult architect)',
   ],
 };

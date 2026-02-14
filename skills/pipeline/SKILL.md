@@ -41,7 +41,7 @@ explore -> {
 Run multiple agents in parallel, merge their outputs.
 
 ```
-parallel(explore, researcher) -> architect -> executor
+parallel(explore, document-specialist) -> architect -> executor
 ```
 
 ## Built-in Pipeline Presets
@@ -103,7 +103,7 @@ parallel(explore, researcher) -> architect -> executor
 ```
 
 **Stages:**
-1. `parallel(researcher, explore)` - External docs + internal code
+1. `parallel(document-specialist, explore)` - External docs + internal code
 2. `architect` - Synthesize findings
 3. `writer` - Document recommendations
 
@@ -177,7 +177,7 @@ parallel(explore, researcher) -> architect -> executor
 ### With Parallel Stages
 
 ```
-/pipeline [explore, researcher] -> architect -> executor "implement OAuth"
+/pipeline [explore, document-specialist] -> architect -> executor "implement OAuth"
 ```
 
 ## Data Passing Protocol
@@ -338,7 +338,7 @@ When parallel agents complete:
 ```
 /pipeline research "implement GraphQL subscriptions"
 ```
-→ Triggers: parallel(researcher, explore) → architect → writer
+→ Triggers: parallel(document-specialist, explore) → architect → writer
 
 ## Cancellation
 

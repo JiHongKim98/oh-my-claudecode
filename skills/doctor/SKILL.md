@@ -92,7 +92,7 @@ ls -la ~/.claude/skills/ 2>/dev/null
 - If `~/.claude/skills/` exists with oh-my-claudecode-related files: WARN - legacy skills (now provided by plugin)
 
 Look for files like:
-- `architect.md`, `researcher.md`, `explore.md`, `executor.md`, etc. in agents/
+- `architect.md`, `document-specialist.md`, `explore.md`, `executor.md`, etc. in agents/
 - `ultrawork.md`, `deepsearch.md`, etc. in commands/
 - Any oh-my-claudecode-related `.md` files in skills/
 

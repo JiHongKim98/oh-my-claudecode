@@ -24,8 +24,8 @@ export const EXPLORE_PROMPT_METADATA = {
         'Quick codebase exploration',
     ],
     avoidWhen: [
-        'External documentation lookup (use researcher)',
-        'GitHub/npm package research (use researcher)',
+        'External documentation lookup (use document-specialist)',
+        'GitHub/npm package research (use document-specialist)',
         'Complex architectural analysis (use architect)',
         'When you already know the file location',
     ],

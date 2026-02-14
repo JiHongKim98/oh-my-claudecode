@@ -144,7 +144,7 @@ console.log(result.modifiedInput.model); // 'sonnet'
 | `designer` | sonnet | UI implementation |
 | `designer-high` | opus | Complex UI architecture |
 | `designer-low` | haiku | Simple styling |
-| `researcher` | sonnet | Documentation lookup |
+| `document-specialist` | sonnet | Documentation lookup |
 | `writer` | haiku | Documentation writing |
 | `vision` | sonnet | Image analysis |
 | `planner` | opus | Strategic planning |

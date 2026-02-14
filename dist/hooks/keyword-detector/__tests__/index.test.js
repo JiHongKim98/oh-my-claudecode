@@ -729,10 +729,9 @@ World`);
             expect(getAllKeywords('```autopilot```')).toEqual([]);
         });
         it('should handle multiple combinable keywords', () => {
-            const result = getAllKeywords('ralph tdd research fix');
+            const result = getAllKeywords('ralph tdd fix');
             expect(result).toContain('ralph');
             expect(result).toContain('tdd');
-            expect(result).toContain('research');
         });
         // Team + Ralph composition tests
         it('should return both ralph and team when both present (linked mode)', () => {

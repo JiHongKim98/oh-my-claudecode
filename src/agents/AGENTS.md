@@ -24,7 +24,7 @@ This directory defines all agents available in oh-my-claudecode:
 | `executor.ts` | Focused task implementation (Sonnet) |
 | `explore.ts` | Fast codebase search (Haiku) |
 | `designer.ts` | UI/UX specialist (Sonnet) |
-| `researcher.ts` | Documentation research (Sonnet) |
+| `document-specialist.ts` | Documentation & reference lookup (Sonnet) |
 | `writer.ts` | Technical documentation (Haiku) |
 | `vision.ts` | Visual/image analysis (Sonnet) |
 | `critic.ts` | Critical plan review (Opus) |
@@ -72,7 +72,7 @@ const agents = getAgentDefinitions();
 | UI components | `designer` | sonnet | Read, Glob, Grep, Edit, Write, Bash |
 | Simple styling | `designer-low` | haiku | Read, Glob, Grep, Edit, Write, Bash |
 | Design systems | `designer-high` | opus | Read, Glob, Grep, Edit, Write, Bash |
-| API documentation | `researcher` | sonnet | Read, Glob, Grep, WebSearch, WebFetch |
+| API documentation | `document-specialist` | sonnet | Read, Glob, Grep, WebSearch, WebFetch |
 | README/docs | `writer` | haiku | Read, Glob, Grep, Edit, Write |
 | Image analysis | `vision` | sonnet | Read, Glob, Grep |
 | Plan review | `critic` | opus | Read, Glob, Grep |
@@ -232,7 +232,7 @@ None - pure TypeScript definitions.
 | Analysis | architect, architect-medium, architect-low | Debugging, architecture |
 | Execution | executor, executor-low, executor-high | Code implementation |
 | Search | explore, explore-high | Codebase exploration |
-| Research | researcher | External documentation |
+| Research | document-specialist | External documentation |
 | Frontend | designer, designer-low, designer-high | UI/UX work |
 | Documentation | writer | Technical writing |
 | Visual | vision | Image/screenshot analysis |

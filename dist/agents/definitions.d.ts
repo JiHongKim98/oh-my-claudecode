@@ -22,7 +22,9 @@ export { qaTesterAgent } from './qa-tester.js';
 export { scientistAgent } from './scientist.js';
 export { exploreAgent } from './explore.js';
 /** @deprecated Use dependency-expert agent instead */
-export { researcherAgent } from './researcher.js';
+export { documentSpecialistAgent } from './document-specialist.js';
+/** @deprecated Use document-specialist agent instead */
+export { documentSpecialistAgent as researcherAgent } from './document-specialist.js';
 export { loadAgentPrompt };
 /**
  * Debugger Agent - Root-Cause Analysis & Debugging (Sonnet)

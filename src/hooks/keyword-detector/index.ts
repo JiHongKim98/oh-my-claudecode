@@ -22,7 +22,6 @@ export type KeywordType =
   | 'ralplan'     // Priority 9
   | 'plan'        // Priority 10
   | 'tdd'         // Priority 11
-  | 'research'    // Priority 12
   | 'ultrathink'  // Priority 13
   | 'deepsearch'  // Priority 14
   | 'analyze'     // Priority 15
@@ -74,7 +73,6 @@ const KEYWORD_PATTERNS: Record<KeywordType, RegExp> = {
   ralplan: /\b(ralplan)\b/i,
   plan: /\bplan\s+(this|the)\b/i,
   tdd: /\b(tdd)\b|\btest\s+first\b|\bred\s+green\b/i,
-  research: /\b(research)\b|\banalyze\s+data\b|\bstatistics\b/i,
   ultrathink: /\b(ultrathink|think hard|think deeply)\b/i,
   deepsearch: /\b(deepsearch)\b|\bsearch\s+(the\s+)?(codebase|code|files?|project)\b|\bfind\s+(in\s+)?(codebase|code|all\s+files?)\b/i,
   analyze: /\b(deep\s*analyze)\b|\binvestigate\s+(the|this|why)\b|\bdebug\s+(the|this|why)\b/i,
@@ -87,7 +85,7 @@ const KEYWORD_PATTERNS: Record<KeywordType, RegExp> = {
  */
 const KEYWORD_PRIORITY: KeywordType[] = [
   'cancel', 'ralph', 'autopilot', 'ultrapilot', 'team', 'ultrawork', 'ecomode',
-  'swarm', 'pipeline', 'ralplan', 'plan', 'tdd', 'research',
+  'swarm', 'pipeline', 'ralplan', 'plan', 'tdd',
   'ultrathink', 'deepsearch', 'analyze', 'codex', 'gemini'
 ];
 

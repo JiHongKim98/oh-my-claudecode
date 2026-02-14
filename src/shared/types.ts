@@ -22,6 +22,7 @@ export interface PluginConfig {
     omc?: { model?: string };
     architect?: { model?: string; enabled?: boolean };
     researcher?: { model?: string };
+    'document-specialist'?: { model?: string };
     explore?: { model?: string };
     frontendEngineer?: { model?: string; enabled?: boolean };
     documentWriter?: { model?: string; enabled?: boolean };

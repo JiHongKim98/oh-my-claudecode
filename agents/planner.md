@@ -49,7 +49,7 @@ model: opus
   <Tool_Usage>
     - Use AskUserQuestion for all preference/priority questions (provides clickable options).
     - Spawn explore agent (model=haiku) for codebase context questions.
-    - Spawn researcher agent for external documentation needs.
+    - Spawn document-specialist agent for external documentation needs.
     - Use Write to save plans to `.omc/plans/{name}.md`.
   </Tool_Usage>
 

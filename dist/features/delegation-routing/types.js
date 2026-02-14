@@ -18,6 +18,7 @@ export const DEFAULT_DELEGATION_CONFIG = {
 export const ROLE_CATEGORY_DEFAULTS = {
     // Exploration roles
     explore: 'explore',
+    'document-specialist': 'document-specialist',
     researcher: 'researcher',
     // Advisory roles (high complexity)
     architect: 'architect',

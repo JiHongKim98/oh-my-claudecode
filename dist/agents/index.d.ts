@@ -19,7 +19,9 @@ export { qaTesterAgent, QA_TESTER_PROMPT_METADATA } from './qa-tester.js';
 export { scientistAgent, SCIENTIST_PROMPT_METADATA } from './scientist.js';
 export { deepExecutorAgent, DEEP_EXECUTOR_PROMPT_METADATA } from './deep-executor.js';
 /** @deprecated Use dependency-expert agent instead */
-export { researcherAgent, RESEARCHER_PROMPT_METADATA } from './researcher.js';
+export { documentSpecialistAgent, DOCUMENT_SPECIALIST_PROMPT_METADATA } from './document-specialist.js';
+/** @deprecated Use document-specialist agent instead */
+export { documentSpecialistAgent as researcherAgent } from './document-specialist.js';
 export { debuggerAgent, verifierAgent } from './definitions.js';
 export { styleReviewerAgent, qualityReviewerAgent, apiReviewerAgent, performanceReviewerAgent } from './definitions.js';
 export { dependencyExpertAgent, testEngineerAgent, qualityStrategistAgent } from './definitions.js';

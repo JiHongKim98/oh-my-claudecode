@@ -25,6 +25,9 @@ export interface PluginConfig {
         researcher?: {
             model?: string;
         };
+        'document-specialist'?: {
+            model?: string;
+        };
         explore?: {
             model?: string;
         };

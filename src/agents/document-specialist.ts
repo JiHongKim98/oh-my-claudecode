@@ -1,19 +1,19 @@
 /**
- * Researcher Agent - Documentation and External Reference Finder
+ * Document Specialist Agent - Documentation and External Reference Finder
  *
  * Searches external resources: official docs, GitHub, Stack Overflow.
  * For internal codebase searches, use explore agent instead.
  *
- * Ported from oh-my-opencode's researcher agent.
+ * Ported from oh-my-opencode's document specialist agent.
  */
 
 import type { AgentConfig, AgentPromptMetadata } from './types.js';
 import { loadAgentPrompt } from './utils.js';
 
-export const RESEARCHER_PROMPT_METADATA: AgentPromptMetadata = {
+export const DOCUMENT_SPECIALIST_PROMPT_METADATA: AgentPromptMetadata = {
   category: 'exploration',
   cost: 'CHEAP',
-  promptAlias: 'researcher',
+  promptAlias: 'document-specialist',
   triggers: [
     { domain: 'External documentation', trigger: 'API references, official docs' },
     { domain: 'OSS implementations', trigger: 'GitHub examples, package source' },
@@ -34,11 +34,11 @@ export const RESEARCHER_PROMPT_METADATA: AgentPromptMetadata = {
 };
 
 
-export const researcherAgent: AgentConfig = {
-  name: 'researcher',
-  description: 'Documentation researcher and external reference finder. Use for official docs, GitHub examples, OSS implementations, API references. Searches EXTERNAL resources, not internal codebase.',
-  prompt: loadAgentPrompt('researcher'),
+export const documentSpecialistAgent: AgentConfig = {
+  name: 'document-specialist',
+  description: 'Document Specialist for documentation research and external reference finding. Use for official docs, GitHub examples, OSS implementations, API references. Searches EXTERNAL resources, not internal codebase.',
+  prompt: loadAgentPrompt('document-specialist'),
   model: 'sonnet',
   defaultModel: 'sonnet',
-  metadata: RESEARCHER_PROMPT_METADATA
+  metadata: DOCUMENT_SPECIALIST_PROMPT_METADATA
 };

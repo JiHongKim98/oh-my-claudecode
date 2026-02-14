@@ -90,6 +90,8 @@ const AGENT_TYPE_CODES = {
     critic: 'C', // opus
     // Vision - 'V' for Vision (lowercase since sonnet)
     vision: 'v', // sonnet
+    // Document Specialist - 'D' for Document
+    'document-specialist': 'D', // sonnet
     // ============================================================
     // BACKWARD COMPATIBILITY (Deprecated)
     // ============================================================
@@ -266,6 +268,8 @@ export function renderAgentsDetailed(agents) {
             name = 'perf';
         if (name === 'dependency-expert')
             name = 'dep-exp';
+        if (name === 'document-specialist')
+            name = 'doc-spec';
         if (name === 'test-engineer')
             name = 'test-eng';
         if (name === 'quality-strategist')
@@ -321,6 +325,7 @@ function getShortAgentName(agentType) {
         'code-reviewer': 'review',
         // Domain Specialists
         'dependency-expert': 'dep-exp',
+        'document-specialist': 'doc-spec',
         'test-engineer': 'test-eng',
         'quality-strategist': 'qs',
         'build-fixer': 'build',

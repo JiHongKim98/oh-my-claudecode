@@ -23,7 +23,9 @@ export { scientistAgent, SCIENTIST_PROMPT_METADATA } from './scientist.js';
 export { deepExecutorAgent, DEEP_EXECUTOR_PROMPT_METADATA } from './deep-executor.js';
 // Backward compatibility: Deprecated researcher export
 /** @deprecated Use dependency-expert agent instead */
-export { researcherAgent, RESEARCHER_PROMPT_METADATA } from './researcher.js';
+export { documentSpecialistAgent, DOCUMENT_SPECIALIST_PROMPT_METADATA } from './document-specialist.js';
+/** @deprecated Use document-specialist agent instead */
+export { documentSpecialistAgent as researcherAgent } from './document-specialist.js';
 // Reformed agents (Build/Analysis Lane)
 export { debuggerAgent, verifierAgent } from './definitions.js';
 // Reformed agents (Review Lane)

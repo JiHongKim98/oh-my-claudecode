@@ -58,6 +58,7 @@ describe('Type Tests', () => {
           omc: { model: 'claude-sonnet-4-5' },
           architect: { model: 'claude-opus-4-6', enabled: true },
           researcher: { model: 'claude-haiku-4-5' },
+          'document-specialist': { model: 'claude-haiku-4-5' },
         },
       };
 

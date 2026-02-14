@@ -52,7 +52,7 @@ Skills are reusable workflow templates that can be invoked via `/oh-my-claudecod
 |-----------|-------|---------|
 | `deepsearch/SKILL.md` | deepsearch | Thorough codebase search |
 | `deepinit/SKILL.md` | deepinit | Generate hierarchical AGENTS.md |
-| `research/SKILL.md` | research | Parallel scientist orchestration |
+| `sciomc/SKILL.md` | sciomc | Parallel scientist orchestration |
 
 ### Utility Skills
 

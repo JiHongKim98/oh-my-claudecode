@@ -38,11 +38,11 @@ export const SCIENTIST_PROMPT_METADATA: AgentPromptMetadata = {
     'Research stages with [STAGE:*] markers for orchestration',
   ],
   avoidWhen: [
-    'Researching external documentation or APIs (use researcher)',
+    'Researching external documentation or APIs (use document-specialist)',
     'Implementing production code features (use executor)',
     'Architecture or system design questions (use architect)',
     'No data files to analyze - just theoretical questions',
-    'Web scraping or external data fetching (use researcher)',
+    'Web scraping or external data fetching (use document-specialist)',
   ],
 };
 

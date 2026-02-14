@@ -197,7 +197,7 @@ import { allCustomTools, lspTools, astTools } from './tools';
 | Agent | Model | Purpose |
 |-------|-------|---------|
 | architect | opus | Architecture, debugging, root cause analysis |
-| researcher | sonnet | Documentation, external API research |
+| document-specialist | sonnet | Documentation, external API research |
 | explore | haiku | Fast codebase pattern search |
 | executor | sonnet | Focused task implementation |
 | designer | sonnet | UI/UX, component design |
@@ -240,7 +240,7 @@ import { allCustomTools, lspTools, astTools } from './tools';
 
 ## Skills (37)
 
-Key skills: `autopilot`, `ultrawork`, `ralph`, `ultrapilot`, `plan`, `ralplan`, `deepsearch`, `deepinit`, `frontend-ui-ux`, `git-master`, `tdd`, `security-review`, `code-review`, `research`, `analyze`, `swarm`, `pipeline`, `ecomode`, `cancel`, `learner`, `note`, `hud`, `doctor`, `omc-setup`, `mcp-setup`, `build-fix`, `ultraqa`
+Key skills: `autopilot`, `ultrawork`, `ralph`, `ultrapilot`, `plan`, `ralplan`, `deepsearch`, `deepinit`, `frontend-ui-ux`, `git-master`, `tdd`, `security-review`, `code-review`, `sciomc`, `external-context`, `analyze`, `swarm`, `pipeline`, `ecomode`, `cancel`, `learner`, `note`, `hud`, `doctor`, `omc-setup`, `mcp-setup`, `build-fix`, `ultraqa`
 
 ## LSP/AST Tools
 
@@ -350,3 +350,15 @@ Settings in `~/.claude/.omc-config.json`:
 ```
 
 <!-- MANUAL: Project-specific notes below this line are preserved on regeneration -->
+
+<!-- OMX:RUNTIME:START -->
+<session_context>
+**Session:** omx-1771026854926-3tbxcj | 2026-02-13T23:54:14.929Z
+
+**Compaction Protocol:**
+Before context compaction, preserve critical state:
+1. Write progress checkpoint via state_write MCP tool
+2. Save key decisions to notepad via notepad_write_working
+3. If context is >80% full, proactively checkpoint state
+</session_context>
+<!-- OMX:RUNTIME:END -->

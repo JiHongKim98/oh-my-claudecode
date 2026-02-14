@@ -147,7 +147,7 @@ export {
   exploreAgent,
   EXPLORE_PROMPT_METADATA,
   researcherAgent,
-  RESEARCHER_PROMPT_METADATA,
+  DOCUMENT_SPECIALIST_PROMPT_METADATA,
   executorAgent,
   SISYPHUS_JUNIOR_PROMPT_METADATA,
   designerAgent,

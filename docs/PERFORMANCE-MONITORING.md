@@ -59,7 +59,7 @@ obs.lines.forEach(line => console.log(line));
 ```
 Agent Observatory (3 active, 85% efficiency)
 🟢 [a1b2c3d] executor 45s tools:12 tokens:8k $0.15 files:3
-🟢 [e4f5g6h] researcher 30s tools:5 tokens:3k $0.08
+🟢 [e4f5g6h] document-specialist 30s tools:5 tokens:3k $0.08
 🟡 [i7j8k9l] architect 120s tools:8 tokens:15k $0.42
    └─ bottleneck: Grep (2.3s avg)
 ⚠ architect: Cost $0.42 exceeds threshold

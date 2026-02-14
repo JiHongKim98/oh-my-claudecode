@@ -31,6 +31,7 @@ export const DEFAULT_DELEGATION_CONFIG: DelegationRoutingConfig = {
 export const ROLE_CATEGORY_DEFAULTS: Record<string, string> = {
   // Exploration roles
   explore: 'explore',
+  'document-specialist': 'document-specialist',
   researcher: 'researcher',
 
   // Advisory roles (high complexity)

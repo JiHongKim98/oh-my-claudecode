@@ -16,8 +16,7 @@
  * 8. ralplan: Iterative planning with consensus
  * 9. plan: Planning interview mode
  * 10. tdd: Test-driven development
- * 11. research: Research orchestration
- * 12. ultrathink/think: Extended reasoning
+ * 11. ultrathink/think: Extended reasoning
  * 13. deepsearch: Codebase search (restricted patterns)
  * 14. analyze: Analysis mode (restricted patterns)
  * 15. codex/gpt: Delegate to Codex MCP (ask_codex)
@@ -297,7 +296,7 @@ function resolveConflicts(matches) {
 
   // Sort by priority order
   const priorityOrder = ['cancel','ralph','autopilot','team','ultrawork','ecomode',
-    'pipeline','ralplan','plan','tdd','research','ultrathink','deepsearch','analyze',
+    'pipeline','ralplan','plan','tdd','ultrathink','deepsearch','analyze',
     'codex','gemini'];
   resolved.sort((a, b) => priorityOrder.indexOf(a.name) - priorityOrder.indexOf(b.name));
 
@@ -426,13 +425,6 @@ async function main() {
         /\btest\s+first\b/i.test(cleanPrompt) ||
         /\bred\s+green\b/i.test(cleanPrompt)) {
       matches.push({ name: 'tdd', args: '' });
-    }
-
-    // Research keywords
-    if (/\b(research)\b/i.test(cleanPrompt) ||
-        /\banalyze\s+data\b/i.test(cleanPrompt) ||
-        /\bstatistics\b/i.test(cleanPrompt)) {
-      matches.push({ name: 'research', args: '' });
     }
 
     // Ultrathink keywords

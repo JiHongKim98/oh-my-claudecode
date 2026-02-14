@@ -10,7 +10,7 @@ This is the single source of truth for all agent tier information. All skill fil
 | **Execution** | executor-low | executor | executor-high |
 | **Deep Work** | - | - | deep-executor |
 | **Search** | explore | - | explore-high |
-| **Research** | - | researcher | - |
+| **Research** | - | document-specialist | - |
 | **Frontend** | designer-low | designer | designer-high |
 | **Docs** | writer | - | - |
 | **Visual** | - | vision | - |
@@ -47,7 +47,7 @@ This is the single source of truth for all agent tier information. All skill fil
 | UI component | designer | MEDIUM |
 | Complex UI system | designer-high | HIGH |
 | Write docs/comments | writer | LOW |
-| Research docs/APIs | researcher | MEDIUM |
+| Research docs/APIs | document-specialist | MEDIUM |
 | Analyze images/diagrams | vision | MEDIUM |
 | Strategic planning | planner | HIGH |
 | Review/critique plan | critic | HIGH |

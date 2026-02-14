@@ -27,7 +27,9 @@ export { exploreAgent } from './explore.js';
 
 // Backward compatibility: Deprecated aliases
 /** @deprecated Use dependency-expert agent instead */
-export { researcherAgent } from './researcher.js';
+export { documentSpecialistAgent } from './document-specialist.js';
+/** @deprecated Use document-specialist agent instead */
+export { documentSpecialistAgent as researcherAgent } from './document-specialist.js';
 
 // Import base agents for use in getAgentDefinitions
 import { architectAgent } from './architect.js';
@@ -42,7 +44,7 @@ import { deepExecutorAgent } from './deep-executor.js';
 import { qaTesterAgent } from './qa-tester.js';
 import { scientistAgent } from './scientist.js';
 import { exploreAgent } from './explore.js';
-import { researcherAgent } from './researcher.js';
+import { documentSpecialistAgent } from './document-specialist.js';
 
 // Re-export loadAgentPrompt (also exported from index.ts)
 export { loadAgentPrompt };
@@ -354,7 +356,8 @@ export function getAgentDefinitions(overrides?: Partial<Record<string, Partial<A
     // ============================================================
     // BACKWARD COMPATIBILITY (Deprecated)
     // ============================================================
-    researcher: researcherAgent,
+    'document-specialist': documentSpecialistAgent,
+    researcher: documentSpecialistAgent,
     'tdd-guide': testEngineerAgent
   };
 

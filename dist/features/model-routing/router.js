@@ -169,6 +169,7 @@ export function quickTierForAgent(agentType) {
         analyst: 'HIGH',
         explore: 'LOW',
         'writer': 'LOW',
+        'document-specialist': 'MEDIUM',
         researcher: 'MEDIUM',
         'executor': 'MEDIUM',
         'designer': 'MEDIUM',

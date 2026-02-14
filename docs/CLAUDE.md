@@ -81,6 +81,7 @@ Domain Specialists:
 - `writer` (haiku): docs, migration notes, user guidance
 - `qa-tester` (sonnet): interactive CLI/service runtime validation
 - `scientist` (sonnet): data/statistical analysis
+- `document-specialist` (sonnet): external documentation & reference lookup
 - `git-master` (sonnet): commit strategy, history hygiene
 
 Product Lane:
@@ -93,7 +94,7 @@ Coordination:
 - `critic` (opus): plan/design critical challenge
 - `vision` (sonnet): image/screenshot/diagram analysis
 
-Deprecated aliases (backward compatibility): `researcher` -> `dependency-expert`, `tdd-guide` -> `test-engineer`.
+Deprecated aliases (backward compatibility): `researcher` -> `document-specialist`, `tdd-guide` -> `test-engineer`.
 
 Some roles are alias prompts mapped to core agent types; the canonical set is in `src/agents/definitions.ts`.
 </agent_catalog>
@@ -183,7 +184,8 @@ Workflow Skills:
 - `ultraqa` (activated by autopilot): QA cycling -- test, verify, fix, repeat
 - `plan` ("plan this", "plan the"): strategic planning; supports `--consensus` and `--review` modes
 - `ralplan` ("ralplan", "consensus plan"): alias for `/plan --consensus` -- iterative planning with Planner, Architect, Critic until consensus
-- `research` ("research", "analyze data"): parallel scientist agents for comprehensive research
+- `sciomc` ("sciomc"): parallel scientist agents for comprehensive analysis
+- `external-context`: invoke parallel document-specialist agents for web searches
 - `deepinit` ("deepinit"): deep codebase init with hierarchical AGENTS.md
 
 Agent Shortcuts (thin wrappers; call the agent directly with `model` for more control):

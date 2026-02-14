@@ -343,24 +343,9 @@ describe('Keyword Detector', () => {
       }
     });
 
-    it('should detect research keyword', () => {
+    it('should not detect research keyword', () => {
       const detected = detectKeywordsWithType('research this topic');
-      expect(detected).toHaveLength(1);
-      expect(detected[0].type).toBe('research');
-      expect(detected[0].keyword).toBe('research');
-    });
-
-    it('should detect research patterns', () => {
-      const patterns = [
-        'analyze data from the file',
-        'run statistics on this'
-      ];
-      for (const pattern of patterns) {
-        const detected = detectKeywordsWithType(pattern);
-        expect(detected.length).toBeGreaterThan(0);
-        const hasResearch = detected.some(d => d.type === 'research');
-        expect(hasResearch).toBe(true);
-      }
+      expect(detected).toHaveLength(0);
     });
 
     it('should detect deepsearch keyword', () => {
@@ -574,10 +559,9 @@ describe('Keyword Detector', () => {
       expect(primary!.type).toBe('tdd');
     });
 
-    it('should prioritize research correctly', () => {
+    it('should return null for removed research keyword', () => {
       const primary = getPrimaryKeyword('research this topic');
-      expect(primary).not.toBeNull();
-      expect(primary!.type).toBe('research');
+      expect(primary).toBeNull();
     });
 
     it('should prioritize deepsearch over generic search', () => {

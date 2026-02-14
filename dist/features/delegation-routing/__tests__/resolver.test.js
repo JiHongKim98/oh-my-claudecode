@@ -225,6 +225,7 @@ describe('resolveDelegation', () => {
     // Test 18: All known role categories use defaults correctly
     it.each([
         ['explore', 'explore'],
+        ['document-specialist', 'document-specialist'],
         ['researcher', 'researcher'],
         ['architect', 'architect'],
         ['planner', 'planner'],

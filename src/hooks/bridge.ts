@@ -348,7 +348,6 @@ async function processKeywordDetector(input: HookInput): Promise<HookOutput> {
       case "ralplan":
       case "plan":
       case "tdd":
-      case "research":
         messages.push(
           `[MODE: ${keywordType.toUpperCase()}] Skill invocation handled by UserPromptSubmit hook.`,
         );

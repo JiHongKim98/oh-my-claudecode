@@ -1,6 +1,6 @@
 ---
-name: research
-description: Orchestrate parallel scientist agents for comprehensive research with AUTO mode
+name: sciomc
+description: Orchestrate parallel scientist agents for comprehensive analysis with AUTO mode
 argument-hint: <research goal>
 ---
 
@@ -20,20 +20,20 @@ Research is a multi-stage workflow that decomposes complex research goals into p
 ## Usage Examples
 
 ```
-/oh-my-claudecode:research <goal>                    # Standard research with user checkpoints
-/oh-my-claudecode:research AUTO: <goal>              # Fully autonomous until complete
-/oh-my-claudecode:research status                    # Check current research session status
-/oh-my-claudecode:research resume                    # Resume interrupted research session
-/oh-my-claudecode:research list                      # List all research sessions
-/oh-my-claudecode:research report <session-id>       # Generate report for session
+/oh-my-claudecode:sciomc <goal>                    # Standard research with user checkpoints
+/oh-my-claudecode:sciomc AUTO: <goal>              # Fully autonomous until complete
+/oh-my-claudecode:sciomc status                    # Check current research session status
+/oh-my-claudecode:sciomc resume                    # Resume interrupted research session
+/oh-my-claudecode:sciomc list                      # List all research sessions
+/oh-my-claudecode:sciomc report <session-id>       # Generate report for session
 ```
 
 ### Quick Examples
 
 ```
-/oh-my-claudecode:research What are the performance characteristics of different sorting algorithms?
-/oh-my-claudecode:research AUTO: Analyze authentication patterns in this codebase
-/oh-my-claudecode:research How does the error handling work across the API layer?
+/oh-my-claudecode:sciomc What are the performance characteristics of different sorting algorithms?
+/oh-my-claudecode:sciomc AUTO: Analyze authentication patterns in this codebase
+/oh-my-claudecode:sciomc How does the error handling work across the API layer?
 ```
 
 ## Research Protocol
@@ -150,7 +150,7 @@ Pending stages: {{PENDING_STAGES}}
 ### AUTO Mode Example
 
 ```
-/oh-my-claudecode:research AUTO: Comprehensive security analysis of the authentication system
+/oh-my-claudecode:sciomc AUTO: Comprehensive security analysis of the authentication system
 
 [Decomposition]
 - Stage 1 (LOW): Enumerate auth-related files
@@ -280,12 +280,12 @@ Batch 2: Stages 6-7 (parallel)
 
 | Command | Action |
 |---------|--------|
-| `/oh-my-claudecode:research status` | Show current session progress |
-| `/oh-my-claudecode:research resume` | Resume most recent interrupted session |
-| `/oh-my-claudecode:research resume <session-id>` | Resume specific session |
-| `/oh-my-claudecode:research list` | List all sessions with status |
-| `/oh-my-claudecode:research report <session-id>` | Generate/regenerate report |
-| `/oh-my-claudecode:research cancel` | Cancel current session (preserves state) |
+| `/oh-my-claudecode:sciomc status` | Show current session progress |
+| `/oh-my-claudecode:sciomc resume` | Resume most recent interrupted session |
+| `/oh-my-claudecode:sciomc resume <session-id>` | Resume specific session |
+| `/oh-my-claudecode:sciomc list` | List all sessions with status |
+| `/oh-my-claudecode:sciomc report <session-id>` | Generate/regenerate report |
+| `/oh-my-claudecode:sciomc cancel` | Cancel current session (preserves state) |
 
 ## Tag Extraction
 

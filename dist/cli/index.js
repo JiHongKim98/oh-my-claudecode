@@ -859,7 +859,7 @@ Examples:
             console.log(chalk.yellow('Available Agents (via Task tool):'));
             console.log(chalk.gray('  Base Agents:'));
             console.log('    architect              - Architecture & debugging (Opus)');
-            console.log('    researcher           - Documentation & research (Sonnet)');
+            console.log('    document-specialist   - External docs & reference lookup (Sonnet)');
             console.log('    explore             - Fast pattern matching (Haiku)');
             console.log('    designer            - UI/UX specialist (Sonnet)');
             console.log('    writer              - Technical writing (Haiku)');

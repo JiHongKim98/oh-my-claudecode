@@ -6,7 +6,7 @@
  *
  * Ported from oh-my-opencode's keyword-detector hook.
  */
-export type KeywordType = 'cancel' | 'ralph' | 'autopilot' | 'ultrapilot' | 'team' | 'ultrawork' | 'ecomode' | 'swarm' | 'pipeline' | 'ralplan' | 'plan' | 'tdd' | 'research' | 'ultrathink' | 'deepsearch' | 'analyze' | 'codex' | 'gemini';
+export type KeywordType = 'cancel' | 'ralph' | 'autopilot' | 'ultrapilot' | 'team' | 'ultrawork' | 'ecomode' | 'swarm' | 'pipeline' | 'ralplan' | 'plan' | 'tdd' | 'ultrathink' | 'deepsearch' | 'analyze' | 'codex' | 'gemini';
 export interface DetectedKeyword {
     type: KeywordType;
     keyword: string;

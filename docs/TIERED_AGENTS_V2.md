@@ -191,7 +191,7 @@ Output escalation recommendation:
 
 ### Librarian Family (Research)
 
-**Base Identity**: External documentation researcher, searches EXTERNAL resources
+**Base Identity**: External documentation document-specialist, searches EXTERNAL resources
 
 | Variant | Model | Tools | Focus |
 |---------|-------|-------|-------|
