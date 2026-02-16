@@ -333,12 +333,31 @@ describe("reply-listener", () => {
       expect(expectedUrl).toContain(messageId);
     });
 
-    it("Discord sends channel notification after successful injection", () => {
+    it("Discord sends channel notification as reply to user message", () => {
       const channelId = "123456";
+      const userMsgId = "999888777";
       const expectedUrl = `https://discord.com/api/v10/channels/${channelId}/messages`;
+      const expectedBody = {
+        content: "Injected into Claude Code session.",
+        message_reference: { message_id: userMsgId },
+        allowed_mentions: { parse: [] as string[] },
+      };
 
       expect(expectedUrl).toContain(`/channels/${channelId}/messages`);
       expect(expectedUrl).not.toContain("reactions");
+      expect(expectedBody.message_reference.message_id).toBe(userMsgId);
+    });
+
+    it("Discord feedback includes message_reference in source", () => {
+      const fs = require("fs");
+      const path = require("path");
+      const source = fs.readFileSync(
+        path.join(__dirname, "..", "reply-listener.ts"),
+        "utf-8",
+      );
+
+      // Channel notification includes message_reference to reply to user's message
+      expect(source).toContain("message_reference: { message_id: msg.id }");
     });
 
     it("Telegram sends reply confirmation on successful injection", () => {
