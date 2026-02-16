@@ -510,31 +510,70 @@ export async function performUpdate(options?: {
         console.warn(`[omc update] ${marketplaceSync.message}`);
       }
 
-      const reconcileResult = reconcileUpdateRuntime({ verbose: options?.verbose });
-      if (!reconcileResult.success) {
+      // CRITICAL FIX: After npm updates the global package, the current process
+      // still has OLD code loaded in memory. We must re-exec to run reconciliation
+      // with the NEW code. Otherwise, installSisyphus() runs OLD logic against NEW files.
+      if (!process.env.OMC_UPDATE_RECONCILE) {
+        // Set flag to prevent infinite loop
+        process.env.OMC_UPDATE_RECONCILE = '1';
+
+        // Find the omc binary path
+        const omcPath = execSync('which omc 2>/dev/null || where omc 2>NUL', {
+          encoding: 'utf-8',
+          stdio: 'pipe',
+        }).trim().split('\n')[0];
+
+        // Re-exec with reconcile subcommand
+        try {
+          execSync(`"${omcPath}" update-reconcile`, {
+            encoding: 'utf-8',
+            stdio: options?.verbose ? 'inherit' : 'pipe',
+            timeout: 60000,
+            env: { ...process.env, OMC_UPDATE_RECONCILE: '1' }
+          });
+        } catch (reconcileError) {
+          return {
+            success: false,
+            previousVersion,
+            newVersion,
+            message: `Updated to ${newVersion}, but runtime reconciliation failed`,
+            errors: [reconcileError instanceof Error ? reconcileError.message : String(reconcileError)],
+          };
+        }
+
+        // Update version metadata after reconciliation succeeds
+        saveVersionMetadata({
+          version: newVersion,
+          installedAt: new Date().toISOString(),
+          installMethod: 'npm',
+          lastCheckAt: new Date().toISOString()
+        });
+
         return {
-          success: false,
+          success: true,
           previousVersion,
           newVersion,
-          message: `Updated to ${newVersion}, but runtime reconciliation failed`,
-          errors: reconcileResult.errors,
+          message: `Successfully updated from ${previousVersion ?? 'unknown'} to ${newVersion}`
+        };
+      } else {
+        // We're in the re-exec'd process - run reconciliation directly
+        const reconcileResult = reconcileUpdateRuntime({ verbose: options?.verbose });
+        if (!reconcileResult.success) {
+          return {
+            success: false,
+            previousVersion,
+            newVersion,
+            message: `Updated to ${newVersion}, but runtime reconciliation failed`,
+            errors: reconcileResult.errors?.map(e => `Reconciliation failed: ${e}`),
+          };
+        }
+        return {
+          success: true,
+          previousVersion,
+          newVersion,
+          message: 'Reconciliation completed successfully'
         };
       }
-
-      // Update version metadata after reconciliation succeeds
-      saveVersionMetadata({
-        version: newVersion,
-        installedAt: new Date().toISOString(),
-        installMethod: 'npm',
-        lastCheckAt: new Date().toISOString()
-      });
-
-      return {
-        success: true,
-        previousVersion,
-        newVersion,
-        message: `Successfully updated from ${previousVersion ?? 'unknown'} to ${newVersion}`
-      };
     } catch (npmError) {
       throw new Error(
         'Auto-update via npm failed. Please run manually:\n' +

@@ -31,6 +31,7 @@ import {
   formatUpdateNotification,
   getInstalledVersion,
   getOMCConfig,
+  reconcileUpdateRuntime,
   CONFIG_FILE,
   type OMCConfig,
 } from '../features/auto-update.js';
@@ -65,6 +66,8 @@ import {
 } from './commands/teleport.js';
 
 import { getRuntimePackageVersion } from '../lib/version.js';
+import { launchCommand } from './launch.js';
+import { interopCommand } from './interop.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -124,8 +127,21 @@ async function displayAnalyticsBanner() {
   }
 }
 
-// Default action when running 'omc' with no args - show everything
+// Default action when running 'omc' with no args
+// Check env var to decide between dashboard and launch
 async function defaultAction() {
+  const defaultActionMode = process.env.OMC_DEFAULT_ACTION || 'launch';
+
+  if (defaultActionMode === 'dashboard') {
+    await displayAnalyticsDashboard();
+  } else {
+    // Launch Claude Code by default
+    await launchCommand([]);
+  }
+}
+
+// Analytics dashboard - moved from defaultAction
+async function displayAnalyticsDashboard() {
   await displayAnalyticsBanner();
 
   // Check if we need to backfill for agent data
@@ -171,6 +187,53 @@ program
   .description('Multi-agent orchestration system for Claude Agent SDK with analytics')
   .version(version)
   .action(defaultAction);
+
+/**
+ * Launch command - Native tmux shell launch for Claude Code
+ */
+program
+  .command('launch [args...]')
+  .description('Launch Claude Code with native tmux shell integration')
+  .allowUnknownOption()
+  .addHelpText('after', `
+Examples:
+  $ omc launch                   Launch Claude Code
+  $ omc launch --madmax          Launch with permissions bypass
+  $ omc launch --yolo            Launch with permissions bypass (alias)
+
+Environment:
+  Set OMC_DEFAULT_ACTION=dashboard to show analytics dashboard when running 'omc' with no args`)
+  .action(async (args: string[]) => {
+    await launchCommand(args);
+  });
+
+/**
+ * Dashboard command - Show analytics dashboard
+ */
+program
+  .command('dashboard')
+  .description('Show analytics dashboard (aggregate stats, costs, agents)')
+  .addHelpText('after', `
+Note: This was the default 'omc' behavior. Now 'omc' launches Claude Code by default.
+Set OMC_DEFAULT_ACTION=dashboard to restore the old behavior.`)
+  .action(async () => {
+    await displayAnalyticsDashboard();
+  });
+
+/**
+ * Interop command - Split-pane tmux session with OMC and OMX
+ */
+program
+  .command('interop')
+  .description('Launch split-pane tmux session with Claude Code (OMC) and Codex (OMX)')
+  .addHelpText('after', `
+Requirements:
+  - Must be running inside a tmux session
+  - Claude CLI must be installed
+  - Codex CLI recommended (graceful fallback if missing)`)
+  .action(() => {
+    interopCommand();
+  });
 
 /**
  * Analytics Commands
@@ -1107,6 +1170,34 @@ Examples:
       const message = error instanceof Error ? error.message : String(error);
       console.error(chalk.red(`Update failed: ${message}`));
       console.error(chalk.gray('Try again with "omc update --force", or reinstall with "omc install --force".'));
+      process.exit(1);
+    }
+  });
+
+/**
+ * Update reconcile command - Internal command for post-update reconciliation
+ * Called automatically after npm install to ensure hooks/settings are updated with NEW code
+ */
+program
+  .command('update-reconcile')
+  .description('Internal: Reconcile runtime state after update (called by update command)')
+  .option('-v, --verbose', 'Show detailed output')
+  .action(async (options) => {
+    try {
+      const reconcileResult = reconcileUpdateRuntime({ verbose: options.verbose });
+      if (!reconcileResult.success) {
+        console.error(chalk.red('Reconciliation failed:'));
+        if (reconcileResult.errors) {
+          reconcileResult.errors.forEach(err => console.error(chalk.red(`  - ${err}`)));
+        }
+        process.exit(1);
+      }
+      if (options.verbose) {
+        console.log(chalk.green(reconcileResult.message));
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(chalk.red(`Reconciliation error: ${message}`));
       process.exit(1);
     }
   });
