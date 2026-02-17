@@ -6,6 +6,16 @@
  * All types used across the team bridge module for MCP worker orchestration.
  */
 
+// Re-export key protocol types for consumers that need both OMC and protocol types
+export type {
+  ProtocolTask,
+  ProtocolMessage,
+  ProtocolHeartbeat,
+  ProtocolWorkerInfo,
+  ProtocolEvent,
+  ProtocolManifest,
+} from 'cli-agent-mail';
+
 /** Bridge daemon configuration — passed via --config file to bridge-entry.ts */
 export interface BridgeConfig {
   teamName: string;

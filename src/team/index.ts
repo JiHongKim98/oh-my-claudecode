@@ -168,3 +168,14 @@ export {
 } from './permissions.js';
 
 export type { WorkerPermissions } from './permissions.js';
+
+export {
+  toProtocolTask,
+  fromProtocolTask,
+  toProtocolMessage,
+  fromProtocolMessage,
+  toProtocolHeartbeat,
+  fromProtocolHeartbeat,
+  toProtocolWorkerInfo,
+  resolveStateRoot,
+} from './protocol-adapter.js';
