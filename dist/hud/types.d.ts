@@ -93,9 +93,6 @@ export interface TranscriptData {
     lastActivatedSkill?: SkillInvocation;
     pendingPermission?: PendingPermission;
     thinkingState?: ThinkingState;
-    toolCallCount: number;
-    agentCallCount: number;
-    skillCallCount: number;
 }
 export interface RalphStateForHud {
     active: boolean;
@@ -170,10 +167,6 @@ export interface HudRenderContext {
     omcVersion: string | null;
     /** Latest available version from npm registry (null if up to date or unknown) */
     updateAvailable: string | null;
-    /** Cumulative tool call counts from transcript */
-    toolCallCount: number;
-    agentCallCount: number;
-    skillCallCount: number;
 }
 export type HudPreset = 'minimal' | 'focused' | 'full' | 'opencode' | 'dense' | 'analytics';
 /**
@@ -258,18 +251,11 @@ export interface HudThresholds {
     /** Session cost ($) that triggers budget critical alert (default: 5.0) */
     budgetCritical: number;
 }
-export interface ContextLimitWarningConfig {
-    /** Context percentage threshold that triggers the warning banner (default: 80) */
-    threshold: number;
-    /** Automatically queue /compact when threshold is exceeded (default: false) */
-    autoCompact: boolean;
-}
 export interface HudConfig {
     preset: HudPreset;
     elements: HudElementConfig;
     thresholds: HudThresholds;
     staleTaskThresholdMinutes: number;
-    contextLimitWarning: ContextLimitWarningConfig;
 }
 export declare const DEFAULT_HUD_CONFIG: HudConfig;
 export declare const PRESET_CONFIGS: Record<HudPreset, Partial<HudElementConfig>>;

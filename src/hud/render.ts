@@ -22,7 +22,6 @@ import { renderAutopilot } from './elements/autopilot.js';
 import { renderCwd } from './elements/cwd.js';
 import { renderGitRepo, renderGitBranch } from './elements/git.js';
 import { renderModel } from './elements/model.js';
-import { renderContextLimitWarning } from './elements/context-warning.js';
 import {
   getAnalyticsDisplay,
   renderAnalyticsLineWithConfig,
@@ -292,17 +291,6 @@ export async function render(context: HudRenderContext, config: HudConfig): Prom
     const bg = renderBackground(context.backgroundTasks);
     if (bg) elements.push(bg);
   }
-
-  // Call counts — always displayed even when zero
-  elements.push(dim(`tools:${context.toolCallCount} | agents:${context.agentCallCount} | skills:${context.skillCallCount}`));
-
-  // Context limit warning banner (shown when ctx% >= threshold)
-  const ctxWarning = renderContextLimitWarning(
-    context.contextPercent,
-    config.contextLimitWarning.threshold,
-    config.contextLimitWarning.autoCompact
-  );
-  if (ctxWarning) detailLines.push(ctxWarning);
 
   // Compose output
   const outputLines: string[] = [];
