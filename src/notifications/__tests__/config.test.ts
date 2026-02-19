@@ -3,6 +3,7 @@ import {
   validateMention,
   parseMentionAllowedMentions,
   buildConfigFromEnv,
+  validateSlackMention,
 } from "../config.js";
 import type { NotificationConfig } from "../types.js";
 
@@ -95,6 +96,60 @@ describe("parseMentionAllowedMentions", () => {
   });
 });
 
+describe("validateSlackMention", () => {
+  it("accepts valid user mention", () => {
+    expect(validateSlackMention("<@U1234567890>")).toBe("<@U1234567890>");
+  });
+
+  it("accepts workspace user mention with W prefix", () => {
+    expect(validateSlackMention("<@W1234567890>")).toBe("<@W1234567890>");
+  });
+
+  it("accepts <!channel>", () => {
+    expect(validateSlackMention("<!channel>")).toBe("<!channel>");
+  });
+
+  it("accepts <!here>", () => {
+    expect(validateSlackMention("<!here>")).toBe("<!here>");
+  });
+
+  it("accepts <!everyone>", () => {
+    expect(validateSlackMention("<!everyone>")).toBe("<!everyone>");
+  });
+
+  it("accepts subteam mention", () => {
+    expect(validateSlackMention("<!subteam^S1234567890>")).toBe("<!subteam^S1234567890>");
+  });
+
+  it("rejects arbitrary text", () => {
+    expect(validateSlackMention("hello world")).toBeUndefined();
+  });
+
+  it("rejects plain @channel without angle brackets", () => {
+    expect(validateSlackMention("@channel")).toBeUndefined();
+  });
+
+  it("rejects Discord-style mention", () => {
+    expect(validateSlackMention("<@12345678901234567>")).toBeUndefined();
+  });
+
+  it("returns undefined for empty string", () => {
+    expect(validateSlackMention("")).toBeUndefined();
+  });
+
+  it("returns undefined for undefined", () => {
+    expect(validateSlackMention(undefined)).toBeUndefined();
+  });
+
+  it("trims whitespace and validates", () => {
+    expect(validateSlackMention("  <@U1234567890>  ")).toBe("<@U1234567890>");
+  });
+
+  it("rejects whitespace-only string", () => {
+    expect(validateSlackMention("   ")).toBeUndefined();
+  });
+});
+
 describe("buildConfigFromEnv", () => {
   const originalEnv = process.env;
 
@@ -109,6 +164,7 @@ describe("buildConfigFromEnv", () => {
     vi.stubEnv("OMC_TELEGRAM_NOTIFIER_CHAT_ID", "");
     vi.stubEnv("OMC_TELEGRAM_NOTIFIER_UID", "");
     vi.stubEnv("OMC_SLACK_WEBHOOK_URL", "");
+    vi.stubEnv("OMC_SLACK_MENTION", "");
   });
 
   afterEach(() => {
@@ -194,6 +250,13 @@ describe("buildConfigFromEnv", () => {
     expect(config!.slack!.mention).toBe("<!channel>");
   });
 
+  it("rejects invalid slack mention format in env var", () => {
+    vi.stubEnv("OMC_SLACK_WEBHOOK_URL", "https://hooks.slack.com/services/test");
+    vi.stubEnv("OMC_SLACK_MENTION", "@everyone");
+    const config = buildConfigFromEnv();
+    expect(config!.slack!.mention).toBeUndefined();
+  });
+
   it("trims whitespace from mention env var", () => {
     vi.stubEnv("OMC_DISCORD_NOTIFIER_BOT_TOKEN", "test-token");
     vi.stubEnv("OMC_DISCORD_NOTIFIER_CHANNEL", "123456");
@@ -233,6 +296,7 @@ describe("getNotificationConfig - deep merge", () => {
     vi.stubEnv("OMC_TELEGRAM_NOTIFIER_CHAT_ID", "");
     vi.stubEnv("OMC_TELEGRAM_NOTIFIER_UID", "");
     vi.stubEnv("OMC_SLACK_WEBHOOK_URL", "");
+    vi.stubEnv("OMC_SLACK_MENTION", "");
 
     mockExistsSync = vi.fn().mockReturnValue(false);
     mockReadFileSync = vi.fn().mockReturnValue("{}");

@@ -98,6 +98,23 @@ export function validateMention(raw: string | undefined): string | undefined {
 }
 
 /**
+ * Validate Slack mention format.
+ * Accepts: <@UXXXXXXXX> (user), <!channel>, <!here>, <!everyone>, <!subteam^SXXXXXXXXX> (user group).
+ * Returns the mention string if valid, undefined otherwise.
+ */
+export function validateSlackMention(raw: string | undefined): string | undefined {
+  const mention = normalizeOptional(raw);
+  if (!mention) return undefined;
+  // <@U...> user mention
+  if (/^<@[UW][A-Z0-9]{6,11}>$/.test(mention)) return mention;
+  // <!channel>, <!here>, <!everyone>
+  if (/^<!(?:channel|here|everyone)>$/.test(mention)) return mention;
+  // <!subteam^S...> user group
+  if (/^<!subteam\^S[A-Z0-9]{6,11}>$/.test(mention)) return mention;
+  return undefined;
+}
+
+/**
  * Parse a validated mention into allowed_mentions structure for Discord API.
  */
 export function parseMentionAllowedMentions(
@@ -168,7 +185,7 @@ export function buildConfigFromEnv(): NotificationConfig | null {
     config.slack = {
       enabled: true,
       webhookUrl: slackWebhook,
-      mention: normalizeOptional(process.env.OMC_SLACK_MENTION),
+      mention: validateSlackMention(process.env.OMC_SLACK_MENTION),
     };
     hasAnyPlatform = true;
   }
@@ -246,13 +263,13 @@ function mergeEnvIntoFileConfig(
       webhookUrl: merged.slack.webhookUrl || envConfig.slack.webhookUrl,
       mention:
         merged.slack.mention !== undefined
-          ? normalizeOptional(merged.slack.mention)
+          ? validateSlackMention(merged.slack.mention)
           : envConfig.slack.mention,
     };
   } else if (merged.slack) {
     merged.slack = {
       ...merged.slack,
-      mention: normalizeOptional(merged.slack.mention),
+      mention: validateSlackMention(merged.slack.mention),
     };
   }
 
@@ -278,6 +295,14 @@ function applyEnvMerge(config: NotificationConfig): NotificationConfig {
     }
     if (merged.discord && merged.discord.mention === undefined) {
       merged = { ...merged, discord: { ...merged.discord, mention: envMention } };
+    }
+  }
+
+  // Apply env mention to any Slack config that still lacks one.
+  const envSlackMention = validateSlackMention(process.env.OMC_SLACK_MENTION);
+  if (envSlackMention) {
+    if (merged.slack && merged.slack.mention === undefined) {
+      merged = { ...merged, slack: { ...merged.slack, mention: envSlackMention } };
     }
   }
 

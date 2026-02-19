@@ -660,6 +660,66 @@ describe("sendSlack", () => {
     const body = JSON.parse(call[1]!.body as string);
     expect(body.text).toBe(basePayload.message);
   });
+
+  it("returns not configured when webhookUrl is empty", async () => {
+    const config: SlackNotificationConfig = {
+      enabled: true,
+      webhookUrl: "",
+    };
+    const result = await sendSlack(config, basePayload);
+    expect(result).toEqual({
+      platform: "slack",
+      success: false,
+      error: "Not configured",
+    });
+  });
+
+  it("rejects HTTP (non-HTTPS) webhook URL", async () => {
+    const config: SlackNotificationConfig = {
+      enabled: true,
+      webhookUrl: "http://hooks.slack.com/services/T00/B00/xxx",
+    };
+    const result = await sendSlack(config, basePayload);
+    expect(result).toEqual({
+      platform: "slack",
+      success: false,
+      error: "Invalid webhook URL",
+    });
+  });
+
+  it("returns error on HTTP failure", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: false, status: 403 }),
+    );
+    const config: SlackNotificationConfig = {
+      enabled: true,
+      webhookUrl: "https://hooks.slack.com/services/T00/B00/xxx",
+    };
+    const result = await sendSlack(config, basePayload);
+    expect(result).toEqual({
+      platform: "slack",
+      success: false,
+      error: "HTTP 403",
+    });
+  });
+
+  it("returns error on fetch exception", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockRejectedValue(new Error("Network failure")),
+    );
+    const config: SlackNotificationConfig = {
+      enabled: true,
+      webhookUrl: "https://hooks.slack.com/services/T00/B00/xxx",
+    };
+    const result = await sendSlack(config, basePayload);
+    expect(result).toEqual({
+      platform: "slack",
+      success: false,
+      error: "Network failure",
+    });
+  });
 });
 
 describe("sendWebhook", () => {
