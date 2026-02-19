@@ -176,7 +176,22 @@ describe("buildConfigFromEnv", () => {
     expect(config!.slack).toEqual({
       enabled: true,
       webhookUrl: "https://hooks.slack.com/services/test",
+      mention: undefined,
     });
+  });
+
+  it("builds slack config with mention from env var", () => {
+    vi.stubEnv("OMC_SLACK_WEBHOOK_URL", "https://hooks.slack.com/services/test");
+    vi.stubEnv("OMC_SLACK_MENTION", "<@U1234567890>");
+    const config = buildConfigFromEnv();
+    expect(config!.slack!.mention).toBe("<@U1234567890>");
+  });
+
+  it("trims whitespace from slack mention env var", () => {
+    vi.stubEnv("OMC_SLACK_WEBHOOK_URL", "https://hooks.slack.com/services/test");
+    vi.stubEnv("OMC_SLACK_MENTION", "  <!channel>  ");
+    const config = buildConfigFromEnv();
+    expect(config!.slack!.mention).toBe("<!channel>");
   });
 
   it("trims whitespace from mention env var", () => {

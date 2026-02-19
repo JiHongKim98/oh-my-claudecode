@@ -8,14 +8,14 @@ describe('Builtin Skills', () => {
   });
 
   describe('createBuiltinSkills()', () => {
-    it('should return correct number of skills (41)', () => {
+    it('should return correct number of skills (42)', () => {
       const skills = createBuiltinSkills();
-      // 41 skills: analyze, autopilot, build-fix, cancel, ccg, code-review, configure-discord, configure-telegram,
-      // deepinit, deepsearch, omc-doctor, external-context, frontend-ui-ux, git-master, omc-help, hud,
-      // learn-about-omc, learner, mcp-setup, note, omc-setup, pipeline, plan, project-session-manager,
-      // psm, ralph, ralph-init, ralplan, release, review, sciomc, security-review, skill, swarm, tdd,
-      // team, trace, ultrapilot, ultraqa, ultrawork, writer-memory
-      expect(skills).toHaveLength(41);
+      // 42 skills: analyze, autopilot, build-fix, cancel, ccg, code-review, configure-discord, configure-slack,
+      // configure-telegram, deepinit, deepsearch, omc-doctor, external-context, frontend-ui-ux, git-master,
+      // omc-help, hud, learn-about-omc, learner, mcp-setup, note, omc-setup, pipeline, plan,
+      // project-session-manager, psm, ralph, ralph-init, ralplan, release, review, sciomc, security-review,
+      // skill, swarm, tdd, team, trace, ultrapilot, ultraqa, ultrawork, writer-memory
+      expect(skills).toHaveLength(42);
     });
 
     it('should return an array of BuiltinSkill objects', () => {
@@ -72,6 +72,7 @@ describe('Builtin Skills', () => {
         'ccg',
         'code-review',
         'configure-discord',
+        'configure-slack',
         'configure-telegram',
         'deepinit',
         'deepsearch',
@@ -150,11 +151,12 @@ describe('Builtin Skills', () => {
     it('should return all skill names', () => {
       const names = listBuiltinSkillNames();
 
-      expect(names).toHaveLength(41);
+      expect(names).toHaveLength(42);
       expect(names).toContain('autopilot');
       expect(names).toContain('cancel');
       expect(names).toContain('ccg');
       expect(names).toContain('configure-discord');
+      expect(names).toContain('configure-slack');
       expect(names).toContain('configure-telegram');
       expect(names).toContain('ralph');
       expect(names).toContain('frontend-ui-ux');

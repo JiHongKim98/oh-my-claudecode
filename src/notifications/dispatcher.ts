@@ -342,6 +342,21 @@ export async function sendTelegram(
 }
 
 /**
+ * Compose Slack message text with mention prefix.
+ * Slack mentions use formats like <@U12345678>, <!channel>, <!here>, <!everyone>,
+ * or <!subteam^S12345> for user groups.
+ */
+function composeSlackText(
+  message: string,
+  mention: string | undefined,
+): string {
+  if (mention) {
+    return `${mention}\n${message}`;
+  }
+  return message;
+}
+
+/**
  * Send notification via Slack incoming webhook.
  */
 export async function sendSlack(
@@ -357,7 +372,8 @@ export async function sendSlack(
   }
 
   try {
-    const body: Record<string, unknown> = { text: payload.message };
+    const text = composeSlackText(payload.message, config.mention);
+    const body: Record<string, unknown> = { text };
     if (config.channel) {
       body.channel = config.channel;
     }

@@ -168,6 +168,7 @@ export function buildConfigFromEnv(): NotificationConfig | null {
     config.slack = {
       enabled: true,
       webhookUrl: slackWebhook,
+      mention: normalizeOptional(process.env.OMC_SLACK_MENTION),
     };
     hasAnyPlatform = true;
   }
@@ -239,6 +240,20 @@ function mergeEnvIntoFileConfig(
   // Merge slack
   if (!merged.slack && envConfig.slack) {
     merged.slack = envConfig.slack;
+  } else if (merged.slack && envConfig.slack) {
+    merged.slack = {
+      ...merged.slack,
+      webhookUrl: merged.slack.webhookUrl || envConfig.slack.webhookUrl,
+      mention:
+        merged.slack.mention !== undefined
+          ? normalizeOptional(merged.slack.mention)
+          : envConfig.slack.mention,
+    };
+  } else if (merged.slack) {
+    merged.slack = {
+      ...merged.slack,
+      mention: normalizeOptional(merged.slack.mention),
+    };
   }
 
   return merged;

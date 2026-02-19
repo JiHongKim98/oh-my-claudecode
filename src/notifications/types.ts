@@ -64,6 +64,8 @@ export interface SlackNotificationConfig {
   channel?: string;
   /** Optional username override */
   username?: string;
+  /** Optional mention to prepend to messages (e.g. "<@U12345678>" for user, "<!subteam^S12345>" for group, "<!channel>" / "<!here>" / "<!everyone>") */
+  mention?: string;
 }
 
 /** Generic webhook configuration */
